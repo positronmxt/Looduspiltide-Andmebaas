@@ -32,6 +32,63 @@ Rakendus koosneb kolmest peamisest komponendist:
 - Git
 - PostgreSQL (Linux või Windows)
 
+### Linux keskkonna ettevalmistamine
+1. **Vajalike pakkide paigaldamine**:
+   ```bash
+   sudo apt update
+   sudo apt install python3 python3-pip python3-venv nodejs npm git postgresql postgresql-contrib
+   ```
+
+2. **PostgreSQL seadistamine Linuxil**:
+   ```bash
+   # PostgreSQL teenuse käivitamine
+   sudo systemctl start postgresql
+   sudo systemctl enable postgresql
+   
+   # Kasutaja ja andmebaasi loomine
+   sudo -u postgres psql -c "CREATE USER nature_user WITH PASSWORD 'securepassword';"
+   sudo -u postgres psql -c "CREATE DATABASE nature_photo_db OWNER nature_user;"
+   sudo -u postgres psql -c "ALTER USER nature_user WITH SUPERUSER;"
+   
+   # PostgreSQL pordiseadistus (vaikimisi 5432 -> projekti jaoks 5433)
+   sudo nano /etc/postgresql/$(pg_config --version | cut -d' ' -f2 | cut -d'.' -f1)/main/postgresql.conf
+   # Muutke rida "port = 5432" -> "port = 5433"
+   
+   # Taaskäivitage PostgreSQL uue pordiseadistusega
+   sudo systemctl restart postgresql
+   ```
+
+### Projekti kloonimine ja käivitamine Linuxil
+
+1. **Projekti kloonimine**:
+   ```bash
+   git clone https://github.com/positronmxt/Looduspiltide-Andmebaas.git
+   cd Looduspiltide-Andmebaas
+   ```
+
+2. **Backend'i käivitamine Linuxil**:
+   ```bash
+   cd backend
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+3. **Frontend'i käivitamine Linuxil** (avage uus terminaliaken):
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
+
+4. **Mõlemad serverid korraga käivitamine Linuxil**:
+   ```bash
+   # See skript on juba projektis olemas
+   chmod +x start_servers.sh
+   ./start_servers.sh
+   ```
+
 ### Windows keskkonna ettevalmistamine
 1. **Python paigaldamine**:
    - Laadige alla ja installige Python 3.11+ [Python ametlikult veebilehelt](https://www.python.org/downloads/windows/)
