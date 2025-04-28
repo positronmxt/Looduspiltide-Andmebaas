@@ -6,11 +6,26 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+echo -e "${YELLOW}Alustame projekti üleslaadimist GitHub-i${NC}"
+
+# Küsi kasutajalt GitHubi kasutajanime ja repo nime
+read -p "Sisesta oma GitHubi kasutajanimi: " GITHUB_USERNAME
+read -p "Sisesta GitHubi repositooriumi nimi (ilma .git lõputa): " REPO_NAME
+
 # GitHub info
-GITHUB_REPO="positronmxt/Looduspiltide-Andmebaas.git"
+GITHUB_REPO="${GITHUB_USERNAME}/${REPO_NAME}.git"
 GITHUB_URL="https://github.com/${GITHUB_REPO}"
 
-echo -e "${YELLOW}Alustame projekti üleslaadimist GitHub-i: ${GITHUB_URL}${NC}"
+echo -e "${YELLOW}Projekti üleslaadimise sihtkoht: ${GITHUB_URL}${NC}"
+
+# Küsi Git kasutajainfo
+read -p "Sisesta oma Git kasutajanimi (näiteks täisnimi): " GIT_USERNAME
+read -p "Sisesta oma Git e-post: " GIT_EMAIL
+
+# Seadista Git kasutajainfo
+git config --global user.name "${GIT_USERNAME}"
+git config --global user.email "${GIT_EMAIL}"
+echo -e "${GREEN}Git kasutajainfo seadistatud.${NC}"
 
 # Kontrolli, kas git on juba seadistatud
 if [ ! -d ".git" ]; then
@@ -35,7 +50,6 @@ __pycache__/
 *.so
 .Python
 env/
-venv/
 build/
 develop-eggs/
 dist/
@@ -50,24 +64,29 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-.pytest_cache/
-.coverage
-htmlcov/
 
 # Node.js
 node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
-package-lock.json
-.DS_Store
+.pnp/
+.pnp.js
+.node_repl_history
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database
+*.sqlite3
+*.db-journal
 
 # Logs
 *.log
 nohup.out
-
-# Database
-*.db-journal
 
 # Environment variables
 .env
@@ -76,113 +95,68 @@ nohup.out
 .env.test.local
 .env.production.local
 
-# IDE settings
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Script with token
-github_upload_with_token.sh
+# OS specific
+.DS_Store
+Thumbs.db
 EOL
 echo -e "${GREEN}.gitignore fail on loodud.${NC}"
 
-# Kontrolli, kas frontend kataloogis on .git kaust ja eemalda see
-if [ -d "frontend/.git" ]; then
-    echo -e "${YELLOW}Eemaldan frontend kataloogist Git konfiguratsiooni...${NC}"
-    rm -rf frontend/.git
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Ei õnnestunud frontend kataloogist .git kausta eemaldada. Proovige käsitsi:${NC}"
-        echo "rm -rf frontend/.git"
-    else
-        echo -e "${GREEN}Frontend kataloogist on Git konfiguratsioon eemaldatud.${NC}"
-    fi
-fi
-
-# Seadistame ajutised Git konfiguratsiooni parameetrid, kui need puuduvad
-if [ -z "$(git config user.name)" ]; then
-    git config user.name "Positron MXT"
-fi
-
-if [ -z "$(git config user.email)" ]; then
-    git config user.email "positronmxt@example.com"
-fi
-
-# Lisa kõik failid jälgimiseks
-echo -e "${YELLOW}Lisan kõik failid Git jälgimisse...${NC}"
+# Lisa kõik failid
+echo -e "${YELLOW}Lisan kõik failid jälgimiseks...${NC}"
 git add .
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failide lisamine ebaõnnestus.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Kõik failid on lisatud.${NC}"
+echo -e "${GREEN}Failid on lisatud.${NC}"
 
-# Tee kinnitus (commit)
-echo -e "${YELLOW}Teen esialgse kinnituse (commit)...${NC}"
-git commit -m "Esialgne kinnitus: looduspiltide andmebaas kuufiltritega"
+# Tee commit
+read -p "Sisesta commit sõnum (nt. 'Esialgne projekti üleslaadimine'): " COMMIT_MESSAGE
+git commit -m "${COMMIT_MESSAGE}"
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Kinnituse (commit) tegemine ebaõnnestus.${NC}"
+    echo -e "${RED}Commit ebaõnnestus.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Esialgne kinnitus on tehtud.${NC}"
+echo -e "${GREEN}Commit on tehtud.${NC}"
 
-# Muuda peaharu nimeks "main"
-echo -e "${YELLOW}Nimetan peaharu ümber 'main'-iks...${NC}"
-git branch -M main
+# Lisa remote
+echo -e "${YELLOW}Lisan GitHubi remote...${NC}"
+git remote add origin "https://github.com/${GITHUB_REPO}"
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Peaharu ümbernimetamine ebaõnnestus.${NC}"
+    echo -e "${RED}Remote lisamine ebaõnnestus.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Peaharu on nüüd 'main'.${NC}"
+echo -e "${GREEN}Remote on lisatud.${NC}"
 
-# Kontrolli, kas remote on juba seadistatud
-if git remote | grep -q "origin"; then
-    echo -e "${YELLOW}Remote 'origin' on juba seadistatud. Eemaldan selle...${NC}"
-    git remote remove origin
+# Küsi autentimise meetodit
+echo -e "${YELLOW}Vali autentimismeetod:${NC}"
+echo "1) GitHub kasutajanimi ja parool"
+echo "2) GitHub Personal Access Token (soovitatav)"
+read -p "Vali (1/2): " AUTH_METHOD
+
+if [ "$AUTH_METHOD" = "1" ]; then
+    # Push koos kasutajanime ja parooliga
+    echo -e "${YELLOW}Laen projekti GitHubi...${NC}"
+    echo -e "${YELLOW}Peale seda küsitakse sinu GitHubi kasutajanime ja parooli.${NC}"
+    git push -u origin master
     if [ $? -ne 0 ]; then
-        echo -e "${RED}Remote 'origin' eemaldamine ebaõnnestus.${NC}"
+        echo -e "${RED}Üleslaadimine ebaõnnestus.${NC}"
+        echo -e "${YELLOW}Proovi uuesti Personal Access Token meetodiga (valik 2).${NC}"
         exit 1
     fi
-fi
-
-# Lisa GitHub remote
-echo -e "${YELLOW}Lisan GitHub repositooriumi remote'ina...${NC}"
-git remote add origin "$GITHUB_URL"
-if [ $? -ne 0 ]; then
-    echo -e "${RED}GitHub repositooriumi lisamine remote'ina ebaõnnestus.${NC}"
-    exit 1
-fi
-echo -e "${GREEN}GitHub repositoorium on lisatud remote'ina.${NC}"
-
-# Küsi kasutaja andmeid interaktiivselt
-echo -e "${YELLOW}Nüüd vajame GitHub autentimist.${NC}"
-echo -e "Kui küsitakse kasutajanime ja parooli, siis:"
-echo -e "1. Kasutajanimi on teie GitHub kasutajanimi"
-echo -e "2. Paroolina kasutage GitHub Personal Access Token'it"
-
-# Lae projekt üles (push)
-echo -e "${YELLOW}Laen projekti GitHub-i üles...${NC}"
-git push -u origin main --force
-PUSH_RESULT=$?
-
-if [ $PUSH_RESULT -ne 0 ]; then
-    echo -e "${RED}Projekti üleslaadimine ebaõnnestus.${NC}"
-    echo -e "${YELLOW}Võimalikud põhjused:${NC}"
-    echo -e "1. Token võib olla vale või kehtetu"
-    echo -e "2. Teil pole õigusi sellesse repositooriumisse laadida"
-    echo -e "3. Remote URL võib olla vale"
-    
-    echo -e "\n${YELLOW}Proovi järgmisi käsureavõtteid:${NC}"
-    echo -e "1. Seadista token otseselt käsureal:"
-    echo -e "   git remote set-url origin https://YourGitHubUsername:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}"
-    echo -e "   git push -u origin main --force"
-    
-    echo -e "\n2. Kasuta Git'i vahemälu salvestamist (võib küsida sinu kasutajanime ja tokenit):"
-    echo -e "   git config --global credential.helper cache"
-    echo -e "   git push -u origin main --force"
-    
+elif [ "$AUTH_METHOD" = "2" ]; then
+    # Push koos tokeniga
+    read -p "Sisesta oma GitHub Personal Access Token: " GITHUB_TOKEN
+    echo -e "${YELLOW}Laen projekti GitHubi kasutades Personal Access Token...${NC}"
+    git push -u https://${GITHUB_TOKEN}@github.com/${GITHUB_REPO} master
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Üleslaadimine ebaõnnestus.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}Vigane valik. Palun käivita skript uuesti.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Projekt on edukalt GitHub-i üles laaditud!${NC}"
-echo -e "Projekti URL: ${GITHUB_URL}"
+echo -e "${GREEN}Projekt on edukalt üles laaditud GitHubi: ${GITHUB_URL}${NC}"
+echo -e "${YELLOW}Nüüd saad oma repositooriumi vaadata aadressil: ${GITHUB_URL}${NC}"
