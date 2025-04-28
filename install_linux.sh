@@ -271,17 +271,28 @@ source venv/bin/activate || {
 
 # Uuenda pip virtuaalkeskkonnas
 echo "Uuendan pip-i virtuaalkeskkonnas..."
-python -m pip install --upgrade pip || {
+venv/bin/pip install --upgrade pip || {
     echo "HOIATUS: Pip-i uuendamine ebaõnnestus, kuid jätkan."
 }
 
 # Paigalda sõltuvused
 echo "Installin Python sõltuvused virtuaalkeskkonnas..."
-python -m pip install -r requirements.txt || {
-    echo "VIGA: Pythoni sõltuvuste paigaldamine ebaõnnestus."
-    echo "Täielik veateade:"
-    python -m pip install -r requirements.txt
-    exit 1
+venv/bin/pip install -r requirements.txt || {
+    # Kui tavaline install ebaõnnestub, proovi PEP668 lipuga
+    echo "Tavaline install ebaõnnestus, proovin alternatiivset meetodit..."
+    venv/bin/pip install --break-system-packages -r requirements.txt || {
+        # Kui ka see ebaõnnestub, proovi skripti kopeerimist venv kausta ja sealt käivitada
+        echo "VIGA: Pythoni sõltuvuste paigaldamine ebaõnnestus isegi alternatiivse meetodiga."
+        echo ""
+        echo "Detailsed sammud probleemi lahendamiseks käsitsi:"
+        echo "1. Loo virtuaalkeskkond: python3 -m venv venv"
+        echo "2. Aktiveeri virtuaalkeskkond: source venv/bin/activate"
+        echo "3. Installeeri sõltuvused: pip install -r requirements.txt"
+        echo ""
+        echo "Veateade:"
+        venv/bin/pip install -r requirements.txt
+        exit 1
+    }
 }
 
 # Loo andmebaasi tabelid
