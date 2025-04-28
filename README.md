@@ -7,7 +7,7 @@ Looduspiltide Andmebaas on tööriist looduspiltide kogumiseks, katalogiseerimis
 Rakendus koosneb kolmest peamisest komponendist:
 - **Backend**: FastAPI-l põhinev serverrakendus, mis haldab andmebaasi ja pakub API-t
 - **Frontend**: React-põhine kasutajaliides piltide sirvimiseks ja haldamiseks
-- **Andmebaas**: Kohandatud relatsioonandmebaas, mis säilitab metaandmed piltide ja liikide kohta
+- **Andmebaas**: PostgreSQL andmebaas, mis säilitab metaandmed piltide ja liikide kohta
 
 ## Funktsionaalsus
 
@@ -21,7 +21,7 @@ Rakendus koosneb kolmest peamisest komponendist:
 
 - **Backend**: Python, FastAPI, SQLAlchemy
 - **Frontend**: JavaScript, React
-- **Andmebaas**: Kohandatud Python-põhine andmebaasimootor
+- **Andmebaas**: PostgreSQL
 - **Andmemudelid**: Pydantic
 
 ## Paigaldamine
