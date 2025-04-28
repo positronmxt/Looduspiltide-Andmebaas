@@ -8,7 +8,7 @@ NC='\033[0m' # No Color
 
 # GitHub repositooriumi URL tokeni põhise autentimisega
 # Format: https://{TOKEN}@github.com/{USERNAME}/{REPO}.git
-GITHUB_TOKEN="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"
+GITHUB_TOKEN="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"
 GITHUB_URL_WITH_TOKEN="https://${GITHUB_TOKEN}@github.com/positronmxt/Looduspiltide-Andmebaas.git"
 GITHUB_URL_DISPLAY="https://github.com/positronmxt/Looduspiltide-Andmebaas.git"
 
