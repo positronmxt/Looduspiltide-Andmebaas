@@ -249,21 +249,49 @@ if ! dpkg -l | grep -q python3-full; then
     }
 fi
 
-# Kontrolli, kas virtuaalkeskkond on juba olemas
+# Virtuaalkeskkonna seadistamine
+echo "Seadistan Python virtuaalkeskkonda..."
 if [ ! -d "venv" ]; then
     echo "Loon uue virtuaalkeskkonna..."
+    # Veendu, et python3-venv on installitud
+    if ! dpkg -l | grep -q python3-venv; then
+        echo "Python3-venv pakett pole installitud. Proovin installida..."
+        sudo apt-get install -y python3-venv || {
+            echo "HOIATUS: python3-venv paketi installimine ebaõnnestus."
+            echo "Proovi käsitsi: sudo apt-get install python3-venv"
+            exit 1
+        }
+    fi
+    
     # Loo virtuaalkeskkond
     python3 -m venv venv || {
         echo "VIGA: Pythoni virtuaalkeskkonna loomine ebaõnnestus."
-        echo "Veenduge, et python3-venv või python3-full pakett on installitud:"
-        echo "sudo apt-get install python3-full"
+        echo "Proovi käsitsi järgmisi käske:"
+        echo "  sudo apt-get install python3-venv python3-full"
+        echo "  python3 -m venv venv"
         exit 1
     }
 else
     echo "Kasutan olemasolevat virtuaalkeskkonda."
 fi
 
+# Kontrolli, kas pip on virtuaalkeskkonnas olemas
+if [ ! -f "venv/bin/pip" ] && [ ! -f "venv/bin/pip3" ]; then
+    echo "VIGA: Pip ei ole virtuaalkeskkonnas saadaval."
+    echo "Proovin taastada virtuaalkeskkonda..."
+    rm -rf venv
+    python3 -m venv venv --clear || {
+        echo "VIGA: Virtuaalkeskkonna taastamine ebaõnnestus."
+        echo ""
+        echo "Proovige käsitsi järgmisi käske:"
+        echo "  rm -rf venv"
+        echo "  python3 -m venv venv"
+        exit 1
+    }
+fi
+
 # Aktiveeri virtuaalkeskkond
+echo "Aktiveerin virtuaalkeskkonna..."
 source venv/bin/activate || {
     echo "VIGA: Pythoni virtuaalkeskkonna aktiveerimine ebaõnnestus."
     exit 1
@@ -271,26 +299,28 @@ source venv/bin/activate || {
 
 # Uuenda pip virtuaalkeskkonnas
 echo "Uuendan pip-i virtuaalkeskkonnas..."
-venv/bin/pip install --upgrade pip || {
+python -m pip install --upgrade pip || {
     echo "HOIATUS: Pip-i uuendamine ebaõnnestus, kuid jätkan."
 }
 
 # Paigalda sõltuvused
 echo "Installin Python sõltuvused virtuaalkeskkonnas..."
-venv/bin/pip install -r requirements.txt || {
+python -m pip install -r requirements.txt || {
     # Kui tavaline install ebaõnnestub, proovi PEP668 lipuga
     echo "Tavaline install ebaõnnestus, proovin alternatiivset meetodit..."
-    venv/bin/pip install --break-system-packages -r requirements.txt || {
-        # Kui ka see ebaõnnestub, proovi skripti kopeerimist venv kausta ja sealt käivitada
-        echo "VIGA: Pythoni sõltuvuste paigaldamine ebaõnnestus isegi alternatiivse meetodiga."
+    python -m pip install --break-system-packages -r requirements.txt || {
+        # Kui ka see ebaõnnestub, anna selged juhised käsitsi lahendamiseks
+        echo "VIGA: Pythoni sõltuvuste paigaldamine ebaõnnestus."
         echo ""
         echo "Detailsed sammud probleemi lahendamiseks käsitsi:"
-        echo "1. Loo virtuaalkeskkond: python3 -m venv venv"
-        echo "2. Aktiveeri virtuaalkeskkond: source venv/bin/activate"
-        echo "3. Installeeri sõltuvused: pip install -r requirements.txt"
+        echo "1. Mine backend kataloogi: cd $INSTALL_DIR/backend"
+        echo "2. Loo virtuaalkeskkond: python3 -m venv venv"
+        echo "3. Aktiveeri virtuaalkeskkond: source venv/bin/activate"
+        echo "4. Uuenda pip: pip install --upgrade pip"
+        echo "5. Installeeri sõltuvused: pip install -r requirements.txt"
         echo ""
         echo "Veateade:"
-        venv/bin/pip install -r requirements.txt
+        python -m pip install -r requirements.txt
         exit 1
     }
 }
