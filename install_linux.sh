@@ -195,6 +195,22 @@ fi
 
 # Uuenda andmebaasi konfiguratsioonifaili õigete parameetritega
 echo "Uuendan andmebaasi konfiguratsiooni..."
+
+# Loo .env fail andmebaasi seadistustega
+echo "Loon .env faili backend kataloogi..."
+env_file="backend/.env"
+cat > "$env_file" << EOL
+# Andmebaasi seadistused
+DB_USER=$db_user
+DB_PASSWORD=$db_password
+DB_HOST=localhost
+DB_PORT=$db_port
+DB_NAME=$db_name
+EOL
+
+echo "Loodud .env fail andmebaasi seadistustega."
+
+# Varuvariandina uuendame ka database.py faili otsest ühendusstring'i
 db_config_file="backend/database.py"
 if [[ -f "$db_config_file" ]]; then
     # Varunda originaal
@@ -202,11 +218,16 @@ if [[ -f "$db_config_file" ]]; then
         echo "HOIATUS: Ei õnnestunud teha varukoopiat andmebaasi konfiguratsioonifailist."
     }
     
-    # Uuenda konfiguratsiooni
-    sed -i "s|postgresql://.*@localhost:[0-9]*/.*|postgresql://${db_user}:${db_password}@localhost:${db_port}/${db_name}|g" "$db_config_file" || {
-        echo "VIGA: Andmebaasi konfiguratsiooni uuendamine ebaõnnestus."
-        exit 1
-    }
+    # Uuenda konfiguratsiooni, kui kasutatakse vana formaati
+    if grep -q "DATABASE_URL = \"postgresql://" "$db_config_file"; then
+        echo "Uuendan legacy andmebaasi ühendusstring'i..."
+        sed -i "s|DATABASE_URL = \"postgresql://.*@localhost:[0-9]*/.*\"|DATABASE_URL = \"postgresql://${db_user}:${db_password}@localhost:${db_port}/${db_name}\"|g" "$db_config_file" || {
+            echo "VIGA: Andmebaasi konfiguratsiooni uuendamine ebaõnnestus."
+            exit 1
+        }
+    else
+        echo "Kasutusele on võetud keskkonna muutujad andmebaasi seadistusteks - .env fail on loodud."
+    fi
 else
     echo "VIGA: Andmebaasi konfiguratsioonifaili ei leitud."
     exit 1
@@ -219,11 +240,17 @@ cd backend || {
     exit 1
 }
 
-# Loo virtuaalkeskkond
-python3 -m venv venv || {
-    echo "VIGA: Pythoni virtuaalkeskkonna loomine ebaõnnestus."
-    exit 1
-}
+# Kontrolli, kas virtuaalkeskkond on juba olemas
+if [ ! -d "venv" ]; then
+    echo "Loon uue virtuaalkeskkonna..."
+    # Loo virtuaalkeskkond
+    python3 -m venv venv || {
+        echo "VIGA: Pythoni virtuaalkeskkonna loomine ebaõnnestus."
+        exit 1
+    }
+else
+    echo "Kasutan olemasolevat virtuaalkeskkonda."
+fi
 
 # Aktiveeri virtuaalkeskkond
 source venv/bin/activate || {

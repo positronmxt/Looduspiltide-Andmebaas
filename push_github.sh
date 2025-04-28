@@ -34,7 +34,7 @@ git remote add origin "https://$TOKEN@github.com/$GITHUB_REPO.git"
 
 # Lae üles olemasolevad commitid
 echo -e "${YELLOW}Laen projekti GitHubi üles...${NC}"
-git push -u origin muudatused:main
+git push -u origin main:main
 PUSH_RESULT=$?
 
 # Puhasta token konfiguratsioonist (turvalisuse huvides)

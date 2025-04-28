@@ -23,7 +23,14 @@ fi
 
 BACKEND_DIR="$PROJECT_DIR/backend"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
-VENV_DIR="$PROJECT_DIR/venv"
+# Kontrolli, kas virtuaalkeskkond on backend kataloogis (uus versioon) või projekti juurkataloogis (vana versioon)
+if [ -d "$BACKEND_DIR/venv" ]; then
+    VENV_DIR="$BACKEND_DIR/venv"
+    echo "Kasutan backend kataloogis olevat virtuaalkeskkonda."
+else
+    VENV_DIR="$PROJECT_DIR/venv"
+    echo "Kasutan projekti juurkataloogis olevat virtuaalkeskkonda."
+fi
 
 # Kontrolli, kas skript käivitati õigest kataloogist, kui mitte, siis liigu sinna
 CURRENT_DIR="$(pwd)"
