@@ -65,32 +65,10 @@ read -s -p "Andmebaasi parool [securepassword]: " db_password
 echo
 db_password=${db_password:-securepassword}
 
-# Kontrolli, kas skripti käivitatakse projekti kataloogis
+# Määra paigalduse kataloog praeguseks kataloogiks
 CURRENT_DIR=$(pwd)
-echo "Paigalduse kataloog: $CURRENT_DIR"
-
-# Täiustatud projekti tuvastus - kontrolli mitmeid indikaatoreid
-if [ -d "$CURRENT_DIR/backend" ] && [ -d "$CURRENT_DIR/frontend" ]; then
-    # Otsene tuvastus juurkataloogis
-    INSTALL_FROM_GITHUB=false
-    INSTALL_DIR=$CURRENT_DIR
-    echo "Tuvastatud olemasolev projekt praeguses kataloogis. Ei klooni uuesti."
-elif [ -f "$CURRENT_DIR/github_upload_with_token.sh" ] || [ -f "$CURRENT_DIR/install_linux.sh" ] || [ -f "$CURRENT_DIR/start_servers.sh" ]; then
-    # Tuvastus projekti skriptide põhjal
-    INSTALL_FROM_GITHUB=false
-    INSTALL_DIR=$CURRENT_DIR
-    echo "Tuvastatud olemasolev projekt praeguses kataloogis skriptide põhjal. Ei klooni uuesti."
-elif [ "$(basename "$CURRENT_DIR")" = "Looduspiltide-Andmebaas" ] || [ "$(basename "$CURRENT_DIR")" = "nature-photo-db" ]; then
-    # Tuvastus kataloogi nime põhjal
-    INSTALL_FROM_GITHUB=false
-    INSTALL_DIR=$CURRENT_DIR
-    echo "Tuvastatud olemasolev projekt kataloogi nime põhjal. Ei klooni uuesti."
-else
-    echo "Praegune kataloog ei sisalda Looduspiltide-Andmebaas projekti."
-    read -p "Millises kaustas soovite projekti kloonida? [$(pwd)]: " install_dir
-    INSTALL_DIR=${install_dir:-$(pwd)}
-    INSTALL_FROM_GITHUB=true
-fi
+INSTALL_DIR=$CURRENT_DIR
+echo "Paigalduse kataloog: $INSTALL_DIR"
 
 # Kinnita andmed
 echo
@@ -98,11 +76,7 @@ echo "Kontrollige palun üle sisestatud parameetrid:"
 echo "- PostgreSQL port: $db_port"
 echo "- Andmebaasi nimi: $db_name"
 echo "- Andmebaasi kasutaja: $db_user"
-if [ "$INSTALL_FROM_GITHUB" = true ]; then
-    echo "- Paigalduskaust: $INSTALL_DIR (projekti kloonitakse GitHubist)"
-else
-    echo "- Paigalduskaust: $INSTALL_DIR (kasutatakse olemasolevat projekti)"
-fi
+echo "- Paigalduskaust: $INSTALL_DIR"
 echo
 read -p "Kas need andmed on õiged? (j/e): " confirm
 if [[ "$confirm" != "j" ]]; then
@@ -219,34 +193,6 @@ if [[ "$db_port" != "5432" ]]; then
     fi
 fi
 
-# Liigu projekti kataloogi
-if [ "$INSTALL_FROM_GITHUB" = true ]; then
-    # Liigu paigalduskataloogi
-    mkdir -p "$INSTALL_DIR" || {
-        echo "VIGA: Ei õnnestunud luua kataloogi $INSTALL_DIR."
-        exit 1
-    }
-    cd "$INSTALL_DIR" || {
-        echo "VIGA: Ei õnnestunud liikuda kataloogi $INSTALL_DIR."
-        exit 1
-    }
-
-    # Klooni repositoorium
-    echo "Kloonin projekti repositooriumi..."
-    git clone https://github.com/positronmxt/Looduspiltide-Andmebaas.git || {
-        echo "VIGA: Projekti kloonimine GitHubist ebaõnnestus."
-        exit 1
-    }
-
-    cd Looduspiltide-Andmebaas || {
-        echo "VIGA: Ei õnnestunud liikuda projekti kataloogi."
-        exit 1
-    }
-else
-    # Kui skript käivitatakse juba projekti kataloogis, pole vaja liikuda
-    echo "Kasutan olemasolevat projekti kataloogis: $INSTALL_DIR"
-fi
-
 # Uuenda andmebaasi konfiguratsioonifaili õigete parameetritega
 echo "Uuendan andmebaasi konfiguratsiooni..."
 db_config_file="backend/database.py"
@@ -315,6 +261,25 @@ npm install || {
 
 # Liigu tagasi projekti juurkataloogi
 cd ..
+
+# Uuenda start_servers.sh skriptis projekti kataloogi tee
+echo "Uuendan start_servers.sh skripti projekti kataloogi teega..."
+start_script="start_servers.sh"
+if [[ -f "$start_script" ]]; then
+    # Varunda originaal
+    cp "$start_script" "${start_script}.bak" || {
+        echo "HOIATUS: Ei õnnestunud teha varukoopiat $start_script failist."
+    }
+    
+    # Uuenda projekti kataloogi tee
+    sed -i "s|PROJECT_DIR=\".*\"|PROJECT_DIR=\"$INSTALL_DIR\"|g" "$start_script" || {
+        echo "HOIATUS: start_servers.sh skripti uuendamine ebaõnnestus."
+        echo "Võite käsitsi uuendada PROJECT_DIR muutujat $start_script failis."
+    }
+    echo "start_servers.sh on uuendatud õige projekti kataloogiga."
+else
+    echo "HOIATUS: start_servers.sh faili ei leitud. Serveri käivitamine võib ebaõnnestuda."
+fi
 
 # Tee käivitusskript käivitatavaks
 chmod +x start_servers.sh || {

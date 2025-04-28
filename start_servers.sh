@@ -2,6 +2,25 @@
 
 # Projekti absoluutne juurkaust - OLULINE: See tagab töötamise mistahes kataloogist
 PROJECT_DIR="/home/gerri/Dokumendid/progemine/nature-photo-db"
+
+# Dünaamiline tuvastus juhuks, kui fikseeritud tee ei toimi
+if [ ! -d "$PROJECT_DIR" ]; then
+    # Proovi tuvastada projekti kataloog skripti asukoha järgi
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+    if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ]; then
+        echo "Kasutan projekti kataloogina skripti kataloogi: $SCRIPT_DIR"
+        PROJECT_DIR="$SCRIPT_DIR"
+    else
+        echo "HOIATUS: Ei suutnud tuvastada projekti kataloogi automaatselt."
+        echo "Proovime kasutada praegust kataloogi."
+        CURRENT_PWD="$(pwd)"
+        if [ -d "$CURRENT_PWD/backend" ] && [ -d "$CURRENT_PWD/frontend" ]; then
+            echo "Leiti backend ja frontend kaustad praeguses kataloogis."
+            PROJECT_DIR="$CURRENT_PWD"
+        fi
+    fi
+fi
+
 BACKEND_DIR="$PROJECT_DIR/backend"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 VENV_DIR="$PROJECT_DIR/venv"
