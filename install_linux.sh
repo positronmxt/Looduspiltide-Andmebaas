@@ -240,12 +240,23 @@ cd backend || {
     exit 1
 }
 
+# Kontrolli, kas python3-full on installitud (vajalik virtuaalkeskkonna jaoks)
+if ! dpkg -l | grep -q python3-full; then
+    echo "Python3-full pakett pole installitud. Proovin installida..."
+    sudo apt-get install -y python3-full || {
+        echo "HOIATUS: Python3-full paketi installimine ebaõnnestus."
+        echo "Virtuaalkeskkonna loomine võib ebaõnnestuda."
+    }
+fi
+
 # Kontrolli, kas virtuaalkeskkond on juba olemas
 if [ ! -d "venv" ]; then
     echo "Loon uue virtuaalkeskkonna..."
     # Loo virtuaalkeskkond
     python3 -m venv venv || {
         echo "VIGA: Pythoni virtuaalkeskkonna loomine ebaõnnestus."
+        echo "Veenduge, et python3-venv või python3-full pakett on installitud:"
+        echo "sudo apt-get install python3-full"
         exit 1
     }
 else
@@ -258,9 +269,18 @@ source venv/bin/activate || {
     exit 1
 }
 
+# Uuenda pip virtuaalkeskkonnas
+echo "Uuendan pip-i virtuaalkeskkonnas..."
+python -m pip install --upgrade pip || {
+    echo "HOIATUS: Pip-i uuendamine ebaõnnestus, kuid jätkan."
+}
+
 # Paigalda sõltuvused
-pip install -r requirements.txt || {
+echo "Installin Python sõltuvused virtuaalkeskkonnas..."
+python -m pip install -r requirements.txt || {
     echo "VIGA: Pythoni sõltuvuste paigaldamine ebaõnnestus."
+    echo "Täielik veateade:"
+    python -m pip install -r requirements.txt
     exit 1
 }
 
