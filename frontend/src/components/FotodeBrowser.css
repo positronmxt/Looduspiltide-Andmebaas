@@ -1,0 +1,709 @@
+.photo-browser {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.photo-browser h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.filter-panel {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #34495e;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  flex: 1;
+}
+
+.filter-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.filter-group input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filter-group input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.filter-hint {
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.date-filter-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-picker {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.date-picker::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.date-picker::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.clear-date-button {
+  position: absolute;
+  right: 30px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #777;
+  padding: 0 5px;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.clear-date-button:hover {
+  background-color: #eee;
+  color: #333;
+}
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.photo-card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.photo-thumbnail {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.photo-info {
+  padding: 12px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-date, .photo-location, .photo-species {
+  margin: 5px 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.photo-date {
+  color: #666;
+}
+
+.photo-location {
+  color: #444;
+  font-weight: 500;
+}
+
+.photo-species {
+  margin-top: 8px;
+  color: #333;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.species-tag {
+  background-color: #e8f4f8;
+  border-radius: 12px;
+  padding: 2px 8px;
+  color: #1a5a7a;
+  font-weight: 500;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.more-species {
+  color: #777;
+  font-size: 12px;
+  margin-left: 4px;
+  background-color: #eee;
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+.no-photos {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 30px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.loading {
+  text-align: center;
+  padding: 30px;
+  color: #3498db;
+  font-weight: bold;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.photo-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Tagab, et overlay on kõige all */
+  padding: 20px;
+  overflow: auto; /* Võimaldab kerimist, kui sisu on suurem kui ekraan */
+}
+
+.photo-detail {
+  background-color: #fff;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90vh; /* Piiratud kõrgus, et võimaldada kerimist */
+  overflow: auto;
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 1010; /* Kõrgem kui overlay */
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.close-button:hover {
+  background-color: #f2f2f2;
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-image {
+  width: 100%;
+  background-color: #f2f2f2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.detail-image img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.image-actions {
+  width: 100%;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ai-identify-button,
+.edit-button,
+.delete-button {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+}
+
+.ai-identify-button {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.ai-identify-button:hover {
+  background-color: #27ae60;
+}
+
+.edit-button {
+  background-color: #3498db;
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #2980b9;
+}
+
+.delete-button {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.delete-button:hover {
+  background-color: #c0392b;
+}
+
+.ai-identify-button:disabled,
+.edit-button:disabled,
+.delete-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.identification-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px 15px;
+  margin-top: 10px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-info {
+  padding: 20px;
+}
+
+.detail-info h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.detail-info h4 {
+  margin-top: 20px;
+  color: #34495e;
+}
+
+.species-list {
+  list-style: none;
+  padding: 0;
+}
+
+.species-item {
+  margin-bottom: 15px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+  position: relative;
+}
+
+.species-content {
+  margin-bottom: 10px;
+}
+
+.species-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-species-button,
+.delete-species-button {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+}
+
+.edit-species-button {
+  background-color: #3498db;
+  color: white;
+}
+
+.edit-species-button:hover {
+  background-color: #2980b9;
+}
+
+.delete-species-button {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.delete-species-button:hover {
+  background-color: #c0392b;
+}
+
+.edit-species-button:disabled,
+.delete-species-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.edit-form,
+.edit-species-form {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.save-button,
+.cancel-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+}
+
+.save-button {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #27ae60;
+}
+
+.cancel-button {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #7f8c8d;
+}
+
+.confirm-delete,
+.confirm-delete-species {
+  background-color: #fee;
+  padding: 15px;
+  border-radius: 4px;
+  margin-top: 15px;
+  text-align: center;
+  position: relative;
+  z-index: 1050; /* Kõrgem z-index kui tavaline sisu */
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 1100; /* Kõrgem z-index, et olla teiste dialoogide peal */
+}
+
+.confirm-yes,
+.confirm-no {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+  position: relative;
+  z-index: 1100; /* Kõrgem z-index, et olla teiste dialoogide peal */
+}
+
+.confirm-no {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.confirm-no:hover {
+  background-color: #7f8c8d;
+}
+
+@media (min-width: 768px) {
+  .detail-content {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .detail-image {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .detail-info {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Metadata section styling */
+.metadata-section {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #f5f9fc;
+  border-radius: 8px;
+  border-left: 3px solid #3498db;
+}
+
+.metadata-section h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.metadata-content p {
+  margin: 5px 0;
+  line-height: 1.4;
+}
+
+/* Kuufiltreeringu stiilid */
+.months-filter {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.months-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.months-filter-header h4 {
+  margin: 0;
+  color: #34495e;
+  font-size: 1rem;
+}
+
+.year-filter {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.year-filter label {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #555;
+}
+
+.year-filter input {
+  width: 80px;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.clear-year-button {
+  position: absolute;
+  right: 5px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #777;
+  padding: 0 5px;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.clear-year-button:hover {
+  background-color: #eee;
+  color: #333;
+}
+
+.months-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .months-buttons {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .months-buttons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.month-button {
+  padding: 8px 0;
+  text-align: center;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #555;
+}
+
+.month-button:hover {
+  background-color: #e8f4f8;
+  border-color: #3498db;
+  color: #2980b9;
+}
+
+.month-button.active {
+  background-color: #3498db;
+  border-color: #2980b9;
+  color: white;
+  font-weight: bold;
+}
+
+.active-month-filter {
+  background-color: #e8f4f8;
+  border-left: 3px solid #3498db;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  color: #2980b9;
+}
+
+.clear-month-filter {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s ease;
+}
+
+.clear-month-filter:hover {
+  background-color: #2980b9;
+}

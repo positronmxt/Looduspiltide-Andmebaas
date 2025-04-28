@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: nature_photo_db_postgres
+    environment:
+      POSTGRES_USER: nature_user
+      POSTGRES_PASSWORD: securepassword
+      POSTGRES_DB: nature_photo_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

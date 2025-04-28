@@ -1,0 +1,100 @@
+/* App-wide styles */
+.App {
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #388e3c;
+  padding: 2rem 1rem;
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.App-header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 1.5rem;
+}
+
+/* Navigation styles */
+.main-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.main-navigation button {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.main-navigation button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.main-navigation button.active {
+  background-color: white;
+  color: #388e3c;
+  border-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+main {
+  min-height: calc(100vh - 240px);
+  padding: 0 20px;
+}
+
+footer {
+  padding: 1.5rem;
+  background-color: #f5f5f5;
+  color: #607d8b;
+  margin-top: 3rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+footer p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
