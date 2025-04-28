@@ -6,8 +6,17 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# GitHub token ja URL
-GITHUB_TOKEN="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"
+# Loe token .env failist
+if [ -f ".env" ]; then
+    source .env
+else
+    echo -e "${RED}Ei leia .env faili, mis peaks sisaldama GitHub tokenit.${NC}"
+    echo -e "Loo .env fail järgmise sisuga:"
+    echo "GITHUB_TOKEN=sinu_github_token"
+    exit 1
+fi
+
+# GitHub URL
 GITHUB_URL="https://github.com/positronmxt/Looduspiltide-Andmebaas.git"
 
 echo -e "${YELLOW}Uuendan projekti GitHubis...${NC}"

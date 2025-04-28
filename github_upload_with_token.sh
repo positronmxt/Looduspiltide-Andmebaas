@@ -6,9 +6,17 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Loe token .env failist
+if [ -f ".env" ]; then
+    source .env
+else
+    echo -e "${RED}Ei leia .env faili, mis peaks sisaldama GitHub tokenit.${NC}"
+    echo -e "Loo .env fail järgmise sisuga:"
+    echo "GITHUB_TOKEN=sinu_github_token"
+    exit 1
+fi
+
 # GitHub repositooriumi URL tokeni põhise autentimisega
-# Format: https://{TOKEN}@github.com/{USERNAME}/{REPO}.git
-GITHUB_TOKEN="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"
 GITHUB_URL_WITH_TOKEN="https://${GITHUB_TOKEN}@github.com/positronmxt/Looduspiltide-Andmebaas.git"
 GITHUB_URL_DISPLAY="https://github.com/positronmxt/Looduspiltide-Andmebaas.git"
 
