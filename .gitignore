@@ -53,4 +53,5 @@ nohup.out
 *.swo
 
 # Script with token
+github_upload_token.sh
 github_upload_with_token.sh
