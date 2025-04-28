@@ -103,9 +103,10 @@ nohup.out
 *.swp
 *.swo
 
-# Skriptid tokeniga
+# Skriptid, mis võivad sisaldada tundlikke andmeid
 github_upload_token.sh
 github_upload_with_token.sh
+.env
 EOL
         echo -e "${GREEN}.gitignore fail on loodud.${NC}"
     fi
@@ -148,7 +149,7 @@ git remote add origin "https://$TOKEN@github.com/$GITHUB_REPO.git"
 
 # Lae üles
 echo -e "${YELLOW}Laen projekti GitHubi üles...${NC}"
-git push -u origin main
+git push -u origin muudatused
 PUSH_RESULT=$?
 
 # Puhasta token konfiguratsioonist (turvalisuse huvides)
@@ -161,7 +162,12 @@ if [ $PUSH_RESULT -ne 0 ]; then
     echo -e "2. Teil pole õigusi sellesse repositooriumisse laadida"
     echo -e "3. GitHub tuvastas varasemaid tokenieid Git ajaloos - sellisel juhul:"
     echo -e "   a) Külasta GitHub'i lehte ja luba token, kui sulle vastav link kuvatakse"
-    echo -e "   b) Või alusta nullist uue tühja repositooriumiga (järgi ekraanil olevaid juhiseid)"
+    echo -e "   b) Või alusta nullist uue tühja repositooriumiga"
+    echo -e ""
+    echo -e "Probleemi lahendamiseks: Kui viga näitab 'repository rule violations',"
+    echo -e "siis ilmselt leidis GitHub teie koodist tundlikke andmeid. Valige üks järgmistest:"
+    echo -e "1. Kasutage GitHubi veebiliidest, et luba konkreetsele tokenile"
+    echo -e "2. Looge uus puhas repo ja lükake ainult praegused failid (mitte ajalugu)"
     exit 1
 fi
 
