@@ -51,3 +51,6 @@ nohup.out
 .vscode/
 *.swp
 *.swo
+
+# Script with token
+github_upload_with_token.sh
