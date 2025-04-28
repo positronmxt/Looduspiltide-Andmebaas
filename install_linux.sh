@@ -65,8 +65,32 @@ read -s -p "Andmebaasi parool [securepassword]: " db_password
 echo
 db_password=${db_password:-securepassword}
 
-read -p "Millises kaustas soovite projekti kloonida? [$(pwd)]: " install_dir
-install_dir=${install_dir:-$(pwd)}
+# Kontrolli, kas skripti käivitatakse projekti kataloogis
+CURRENT_DIR=$(pwd)
+echo "Paigalduse kataloog: $CURRENT_DIR"
+
+# Täiustatud projekti tuvastus - kontrolli mitmeid indikaatoreid
+if [ -d "$CURRENT_DIR/backend" ] && [ -d "$CURRENT_DIR/frontend" ]; then
+    # Otsene tuvastus juurkataloogis
+    INSTALL_FROM_GITHUB=false
+    INSTALL_DIR=$CURRENT_DIR
+    echo "Tuvastatud olemasolev projekt praeguses kataloogis. Ei klooni uuesti."
+elif [ -f "$CURRENT_DIR/github_upload_with_token.sh" ] || [ -f "$CURRENT_DIR/install_linux.sh" ] || [ -f "$CURRENT_DIR/start_servers.sh" ]; then
+    # Tuvastus projekti skriptide põhjal
+    INSTALL_FROM_GITHUB=false
+    INSTALL_DIR=$CURRENT_DIR
+    echo "Tuvastatud olemasolev projekt praeguses kataloogis skriptide põhjal. Ei klooni uuesti."
+elif [ "$(basename "$CURRENT_DIR")" = "Looduspiltide-Andmebaas" ] || [ "$(basename "$CURRENT_DIR")" = "nature-photo-db" ]; then
+    # Tuvastus kataloogi nime põhjal
+    INSTALL_FROM_GITHUB=false
+    INSTALL_DIR=$CURRENT_DIR
+    echo "Tuvastatud olemasolev projekt kataloogi nime põhjal. Ei klooni uuesti."
+else
+    echo "Praegune kataloog ei sisalda Looduspiltide-Andmebaas projekti."
+    read -p "Millises kaustas soovite projekti kloonida? [$(pwd)]: " install_dir
+    INSTALL_DIR=${install_dir:-$(pwd)}
+    INSTALL_FROM_GITHUB=true
+fi
 
 # Kinnita andmed
 echo
@@ -74,7 +98,11 @@ echo "Kontrollige palun üle sisestatud parameetrid:"
 echo "- PostgreSQL port: $db_port"
 echo "- Andmebaasi nimi: $db_name"
 echo "- Andmebaasi kasutaja: $db_user"
-echo "- Paigalduskaust: $install_dir"
+if [ "$INSTALL_FROM_GITHUB" = true ]; then
+    echo "- Paigalduskaust: $INSTALL_DIR (projekti kloonitakse GitHubist)"
+else
+    echo "- Paigalduskaust: $INSTALL_DIR (kasutatakse olemasolevat projekti)"
+fi
 echo
 read -p "Kas need andmed on õiged? (j/e): " confirm
 if [[ "$confirm" != "j" ]]; then
@@ -191,27 +219,33 @@ if [[ "$db_port" != "5432" ]]; then
     fi
 fi
 
-# Liigu paigalduskataloogi
-mkdir -p "$install_dir" || {
-    echo "VIGA: Ei õnnestunud luua kataloogi $install_dir."
-    exit 1
-}
-cd "$install_dir" || {
-    echo "VIGA: Ei õnnestunud liikuda kataloogi $install_dir."
-    exit 1
-}
+# Liigu projekti kataloogi
+if [ "$INSTALL_FROM_GITHUB" = true ]; then
+    # Liigu paigalduskataloogi
+    mkdir -p "$INSTALL_DIR" || {
+        echo "VIGA: Ei õnnestunud luua kataloogi $INSTALL_DIR."
+        exit 1
+    }
+    cd "$INSTALL_DIR" || {
+        echo "VIGA: Ei õnnestunud liikuda kataloogi $INSTALL_DIR."
+        exit 1
+    }
 
-# Klooni repositoorium
-echo "Kloonin projekti repositooriumi..."
-git clone https://github.com/positronmxt/Looduspiltide-Andmebaas.git || {
-    echo "VIGA: Projekti kloonimine GitHubist ebaõnnestus."
-    exit 1
-}
+    # Klooni repositoorium
+    echo "Kloonin projekti repositooriumi..."
+    git clone https://github.com/positronmxt/Looduspiltide-Andmebaas.git || {
+        echo "VIGA: Projekti kloonimine GitHubist ebaõnnestus."
+        exit 1
+    }
 
-cd Looduspiltide-Andmebaas || {
-    echo "VIGA: Ei õnnestunud liikuda projekti kataloogi."
-    exit 1
-}
+    cd Looduspiltide-Andmebaas || {
+        echo "VIGA: Ei õnnestunud liikuda projekti kataloogi."
+        exit 1
+    }
+else
+    # Kui skript käivitatakse juba projekti kataloogis, pole vaja liikuda
+    echo "Kasutan olemasolevat projekti kataloogis: $INSTALL_DIR"
+fi
 
 # Uuenda andmebaasi konfiguratsioonifaili õigete parameetritega
 echo "Uuendan andmebaasi konfiguratsiooni..."
@@ -299,7 +333,7 @@ echo "  Paigaldus on lõpetatud!"
 echo "============================================================="
 echo
 echo "Käivitage rakendus käsuga:"
-echo "cd $install_dir/Looduspiltide-Andmebaas && ./start_servers.sh"
+echo "cd $INSTALL_DIR && ./start_servers.sh"
 echo
 echo "Backend käivitub aadressil: http://localhost:8000"
 echo "Frontend käivitub aadressil: http://localhost:3000"
