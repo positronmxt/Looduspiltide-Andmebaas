@@ -30,6 +30,57 @@ Rakendus koosneb kolmest peamisest komponendist:
 - Python 3.11+
 - Node.js ja npm
 - Git
+- PostgreSQL (Linux või Windows)
+
+### Windows keskkonna ettevalmistamine
+1. **Python paigaldamine**:
+   - Laadige alla ja installige Python 3.11+ [Python ametlikult veebilehelt](https://www.python.org/downloads/windows/)
+   - Installimisel märkige kindlasti "Add Python to PATH"
+
+2. **Node.js paigaldamine**:
+   - Laadige alla ja installige Node.js [Node.js ametlikult veebilehelt](https://nodejs.org/)
+
+3. **Git paigaldamine**:
+   - Laadige alla ja installige Git [Git ametlikult veebilehelt](https://git-scm.com/download/win)
+   - Valige installimisel "Git from the command line and also from 3rd-party software"
+
+4. **PostgreSQL paigaldamine**:
+   - Laadige alla ja installige PostgreSQL [PostgreSQL ametlikult veebilehelt](https://www.postgresql.org/download/windows/)
+   - Installimisel määrake kasutajanimi 'nature_user', parool 'securepassword' ja port '5433'
+   - Looge andmebaas nimega 'nature_photo_db'
+
+### Projekti kloonimine ja käivitamine Windowsil
+
+1. **Projekti kloonimine**:
+   ```cmd
+   git clone https://github.com/positronmxt/Looduspiltide-Andmebaas.git
+   cd Looduspiltide-Andmebaas
+   ```
+
+2. **Backend'i käivitamine Windowsil**:
+   ```cmd
+   cd backend
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+3. **Frontend'i käivitamine Windowsil** (avage uus käsureaaken):
+   ```cmd
+   cd frontend
+   npm install
+   npm start
+   ```
+
+4. **Mõlemad serverid korraga käivitamine Windowsil**:
+   - Looge fail nimega `start_servers.bat` projekti juurkataloogi
+   - Lisage sellele järgmine sisu:
+   ```batch
+   @echo off
+   start cmd /k "cd backend && python main.py"
+   start cmd /k "cd frontend && npm start"
+   echo Mõlemad serverid on käivitatud!
+   ```
+   - Käivitage skript topeltklõpsuga või käsurealt käsuga `start_servers.bat`
 
 ### Backend'i käivitamine
 ```bash
