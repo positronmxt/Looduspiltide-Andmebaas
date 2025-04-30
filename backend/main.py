@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Lisa ülemkataloog Pythoni otsingusüsteemi, et impordid töötaksid otse käivitatuna
 sys.path.append(str(Path(__file__).parent.parent))
 
-from routers import photo_routes, species_routes, relation_routes, plant_id_api, browse_routes
+from routers import photo_routes, species_routes, relation_routes, plant_id_api, browse_routes, settings_routes
 
 # Loo FastAPI rakendus
 app = FastAPI(
@@ -67,6 +67,7 @@ app.include_router(species_routes.router)
 app.include_router(relation_routes.router)
 app.include_router(plant_id_api.router)
 app.include_router(browse_routes.router)
+app.include_router(settings_routes.router)
 logger.info("Kõik marsruuterid registreeritud!")
 
 # Lisa staatiliste failide teenindus piltide jaoks

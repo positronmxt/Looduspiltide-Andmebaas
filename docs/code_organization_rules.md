@@ -92,7 +92,9 @@ Each file should include:
    - Käivitamisskripti (start_servers.sh) **PEAB** kasutama rakenduse käivitamiseks
    - Skripti **PEAB** käivitama projekti juurkataloogist: `/home/gerri/Dokumendid/progemine/nature-photo-db/`
    - Õige käsk on: `cd /home/gerri/Dokumendid/progemine/nature-photo-db/ && ./start_servers.sh`
-   - Käsitsi käivitatud serverid ei ole lubatud, et vältida ebajärjepidevaid keskkonnaseadistusi
+   - **HOIATUS: Käsitsi käivitatud serverid ei ole lubatud, et vältida ebajärjepidevaid keskkonnaseadistusi**
+   - **HOIATUS: ÄRGE KUNAGI käivitage frontendi või backendi otse npm start või python3 main.py käskudega!**
+   - **HOIATUS: Käsitsi käivitamine võib põhjustada port-konflikte, keskkonna muutujate probleeme ja andmebaasi ühendusvigu!**
    - Skript tagab järjestikuse käivitamise: andmebaas → backend → frontend
 
 2. **Python Version Requirement**:

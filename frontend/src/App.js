@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import './App.css';
-import SpeciesVerification from './components/SpeciesVerification';
 import FotodeBrowser from './components/FotodeBrowser';
-import PhotoUploader from './components/PhotoUploader';
 import MassPhotoUploader from './components/MassPhotoUploader';
+import AdminPanel from './components/AdminPanel';
+import { API_BASE_URL, API_ENDPOINTS } from './config/config';
 
 function App() {
-  const [activeView, setActiveView] = useState('browser'); // 'verification', 'browser', 'uploader' või 'massUploader'
+  const [activeView, setActiveView] = useState('browser'); // 'browser', 'massUploader' või 'admin'
 
   return (
     <div className="App">
@@ -16,22 +16,10 @@ function App() {
         
         <nav className="main-navigation">
           <button 
-            className={activeView === 'verification' ? 'active' : ''}
-            onClick={() => setActiveView('verification')}
-          >
-            Taime Tuvastamine
-          </button>
-          <button 
-            className={activeView === 'uploader' ? 'active' : ''}
-            onClick={() => setActiveView('uploader')}
-          >
-            Pildi Üleslaadimine
-          </button>
-          <button 
             className={activeView === 'massUploader' ? 'active' : ''}
             onClick={() => setActiveView('massUploader')}
           >
-            Massiline Üleslaadimine
+            Piltide Üleslaadimine
           </button>
           <button 
             className={activeView === 'browser' ? 'active' : ''}
@@ -39,14 +27,19 @@ function App() {
           >
             Piltide Sirvimine
           </button>
+          <button 
+            className={activeView === 'admin' ? 'active' : ''}
+            onClick={() => setActiveView('admin')}
+          >
+            Administreerimine
+          </button>
         </nav>
       </header>
       
       <main>
-        {activeView === 'verification' && <SpeciesVerification />}
-        {activeView === 'uploader' && <PhotoUploader />}
         {activeView === 'massUploader' && <MassPhotoUploader />}
         {activeView === 'browser' && <FotodeBrowser />}
+        {activeView === 'admin' && <AdminPanel />}
       </main>
       
       <footer>

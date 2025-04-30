@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './SpeciesVerification.css';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/config';
 
 /**
  * TaimeliikiTuvastamine komponent piltide üleslaadimiseks ja taimeliikide tuvastamiseks.
@@ -42,7 +43,7 @@ const SpeciesVerification = () => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch('http://localhost:8001/identify/', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.IDENTIFY}`, {
         method: 'POST',
         body: formData,
       });

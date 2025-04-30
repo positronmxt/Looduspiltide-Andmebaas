@@ -265,7 +265,6 @@ required_packages=(
     "nodejs" "npm" "git" 
     "postgresql" "postgresql-contrib" "postgresql-client"
     "build-essential" "libpq-dev" "curl" "wget"
-    "libimage-exiftool-perl" # ExifTool piltide metaandmete jaoks
 )
 
 missing_packages=()

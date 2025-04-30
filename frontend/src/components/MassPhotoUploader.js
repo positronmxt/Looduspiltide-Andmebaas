@@ -120,7 +120,7 @@ const MassPhotoUploader = () => {
     }
     
     try {
-      const response = await fetch('http://localhost:8001/photos/upload', {
+      const response = await fetch('http://localhost:8000/photos/upload', {
         method: 'POST',
         body: formData,
       });
@@ -231,7 +231,7 @@ const MassPhotoUploader = () => {
   
   return (
     <div className="mass-photo-uploader">
-      <h2>Massiline Piltide Üleslaadimine</h2>
+      <h2>Piltide Üleslaadimine</h2>
       <p className="uploader-info">
         See vaade võimaldab laadida üles mitu looduspilti korraga. 
         Piltide üleslaadimiseks võid kasutada faili valimist või lohistada pildid siia aknasse.

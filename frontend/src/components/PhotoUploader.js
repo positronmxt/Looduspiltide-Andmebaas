@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './PhotoUploader.css';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/config';
 
 /**
  * Lihtsate piltide üleslaadimise komponent.
@@ -41,7 +42,7 @@ const PhotoUploader = () => {
       formData.append('file', file);
 
       // Saada fail serverile, et lugeda metaandmeid
-      const response = await fetch('http://localhost:8001/photos/extract-metadata', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PHOTOS}/extract-metadata`, {
         method: 'POST',
         body: formData,
       });
@@ -77,7 +78,12 @@ const PhotoUploader = () => {
     e.preventDefault();
     
     if (!selectedFile) {
-      setError('Palun vali esmalt pilt');
+      alert('Palun vali foto, mida üles laadida!');
+      return;
+    }
+    
+    if (!location.trim()) {
+      alert('Palun sisesta asukoht!');
       return;
     }
 
@@ -87,14 +93,11 @@ const PhotoUploader = () => {
 
     const formData = new FormData();
     formData.append('file', selectedFile);
+    formData.append('location', location);
     
     // Lisame kuupäeva ja asukoha, kui need on sisestatud
     if (date) {
       formData.append('date', date);
-    }
-    
-    if (location) {
-      formData.append('location', location);
     }
     
     // Lisame võimalikud GPS koordinaadid, kui need on saadaval metaandmetest
@@ -121,7 +124,7 @@ const PhotoUploader = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8001/photos/upload', {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.UPLOAD}`, {
         method: 'POST',
         body: formData,
       });

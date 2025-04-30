@@ -1,3 +1,6 @@
+// Import Node.js polyfill'id kõige esimesena
+import './browserPolyfill';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
