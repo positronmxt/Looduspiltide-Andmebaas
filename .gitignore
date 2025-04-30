@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
 build/
 develop-eggs/
 dist/
@@ -19,29 +20,24 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Node.js
 node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
-.pnp/
-.pnp.js
-.node_repl_history
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Database
-*.sqlite3
-*.db-journal
+package-lock.json
+.DS_Store
 
 # Logs
 *.log
 nohup.out
+
+# Database
+*.db-journal
 
 # Environment variables
 .env
@@ -50,6 +46,11 @@ nohup.out
 .env.test.local
 .env.production.local
 
-# OS specific
-.DS_Store
-Thumbs.db
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Script with token
+github_upload_with_token.sh
