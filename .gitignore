@@ -54,14 +54,3 @@ nohup.out
 
 # Script with token
 github_upload_with_token.sh
-
-# Uploaded files - eriti pildid
-file_storage/*.jpg
-file_storage/*.jpeg
-file_storage/*.png
-file_storage/*.gif
-file_storage/*.bmp
-file_storage/*.webp
-file_storage/*.tiff
-file_storage/*.heic
-file_storage/*.raw
