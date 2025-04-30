@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './FotodeBrowser.css';
+import { API_BASE_URL, API_ENDPOINTS, STATIC_FILE_URL } from '../config/config';
 
 const FotodeBrowser = () => {
   const [photos, setPhotos] = useState([]);
@@ -53,7 +54,7 @@ const FotodeBrowser = () => {
     setError(null);
     
     try {
-      let url = 'http://localhost:8001/photos/?';
+      let url = `${API_BASE_URL}${API_ENDPOINTS.PHOTOS}/?`;
       
       if (filters.speciesName) url += `species_name=${encodeURIComponent(filters.speciesName)}&`;
       if (filters.location) url += `location=${encodeURIComponent(filters.location)}&`;
@@ -162,7 +163,10 @@ const FotodeBrowser = () => {
 
   const handlePhotoClick = async (photoId) => {
     try {
-      const response = await fetch(`http://localhost:8001/photos/${photoId}`);
+      // Lähtestame tuvastuse oleku uue foto avamisel
+      setIdentificationSuccess(false);
+      
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PHOTOS}/${photoId}`);
       
       if (!response.ok) {
         throw new Error('Foto detailide laadimine ebaõnnestus');
@@ -173,6 +177,24 @@ const FotodeBrowser = () => {
       
       if (!data) {
         throw new Error('Foto andmeid ei saadud');
+      }
+      
+      // Kontrolli liikide nimekirja
+      if (!data.species || data.species.length === 0) {
+        // Kui foto liikide nimekiri on tühi, proovi liigi seoseid eraldi pärida
+        console.log('Foto liikide nimekiri on tühi, proovime eraldi pärida...');
+        try {
+          const relationsResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.RELATIONS}/photo/${photoId}`);
+          if (relationsResponse.ok) {
+            const relationsData = await relationsResponse.json();
+            if (relationsData && Array.isArray(relationsData) && relationsData.length > 0) {
+              console.log('Leitud liikide seosed:', relationsData);
+              data.species = relationsData;
+            }
+          }
+        } catch (relErr) {
+          console.error('Viga liikide seoste pärimisel:', relErr);
+        }
       }
       
       setSelectedPhoto({
@@ -214,7 +236,7 @@ const FotodeBrowser = () => {
     
     try {
       console.log('Tuvastan taimi fotole ID-ga:', selectedPhoto.photo.id);
-      const response = await fetch(`http://localhost:8001/identify/existing/${selectedPhoto.photo.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PLANT_ID}/existing/${selectedPhoto.photo.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,24 +244,75 @@ const FotodeBrowser = () => {
       });
       
       if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Kontrolli, kas veateade on seotud API võtme puudumisega
+        if (response.status === 400 && errorData.detail && 
+            (errorData.detail.includes("API võti puudub") || 
+             errorData.detail.includes("Plant.ID API võti") ||
+             errorData.detail.includes("administreerimislehel"))) {
+          throw new Error("Taimetuvastuse jaoks on vaja seadistada Plant.ID API võti. Palun minge administreerimislehele API võtme seadistamiseks.");
+        }
+        
         throw new Error('Taime tuvastamine ebaõnnestus');
       }
       
       const data = await response.json();
       console.log('Tuvastamise tulemused:', data);
+      console.log('Tuvastamise tulemuste tüüp:', typeof data, Array.isArray(data));
+      console.log('Tuvastamise tulemuste pikkus:', data.length);
+
+      // Kontrollime kas array on tühi, kuigi seda poleks tohi olla
+      if (data && Array.isArray(data) && data.length === 0) {
+        console.error("HOIATUS: API tagastas tühja massiivi, kuigi seda ei peaks juhtuma!");
+        // Proovime teha veel ühe päringu otse curl käsuga
+        alert("Tuvastamise vastus on tühi, kuid API peaks andmeid tagastama. Kontrolli logisid.");
+      }
+
+      // Otse kuvame tuvastatud liigid frontendis ilma andmebaasist uuesti pärimata
+      if (data && data.length > 0) {
+        console.log("Tulemused on olemas, kuvame need");
+        // Loome spetsiaalsed objektid frontendi jaoks, et need sarnaneks andmebaasi omadega
+        const formattedSpecies = data.map((species, index) => {
+          console.log(`Formateerin liiki: ${species.scientific_name}`);
+          return {
+            id: `temp-${Date.now()}-${index}`, // Ajutine ID frontendis kuvamiseks
+            scientific_name: species.scientific_name,
+            common_name: species.common_names ? species.common_names[0] : null,
+            family: species.family,
+            probability: species.probability
+          };
+        });
+        
+        console.log("Formateeritud liigid:", formattedSpecies);
+        
+        // Uuendame kohe foto andmed uute liikidega
+        setSelectedPhoto(prev => {
+          const updated = {
+            ...prev,
+            species: formattedSpecies
+          };
+          console.log("Uuendatud foto andmed:", updated);
+          return updated;
+        });
+        setIdentificationSuccess(true);
+      } else {
+        console.log("Tulemused on tühjad või puuduvad!");
+      }
       
+      // Proovime siiski ka andmebaasist värskendada, aga me ei sõltu sellest enam
       setTimeout(async () => {
         try {
           await handlePhotoClick(selectedPhoto.photo.id);
-          setIdentificationSuccess(true);
         } catch (err) {
           console.error('Viga foto uuesti laadimisel:', err);
+          // Kui andmebaasist laadimine ebaõnnestub, siis me juba näitame tulemusi, seega pole probleemi
         }
       }, 1000);
       
     } catch (err) {
       console.error('Viga taime tuvastamisel:', err);
-      setError('Taime tuvastamine ebaõnnestus. Palun proovige hiljem uuesti.');
+      setError(err.message);
     } finally {
       setIdentifyingPhoto(false);
     }
@@ -276,7 +349,7 @@ const FotodeBrowser = () => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8001/photos/${selectedPhoto.photo.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PHOTOS}/${selectedPhoto.photo.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +396,7 @@ const FotodeBrowser = () => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8001/photos/${selectedPhoto.photo.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PHOTOS}/${selectedPhoto.photo.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -385,7 +458,7 @@ const FotodeBrowser = () => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8001/species/${editSpecies.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SPECIES}/${editSpecies.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -435,7 +508,7 @@ const FotodeBrowser = () => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8001/species/${confirmDeleteSpecies.id}`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SPECIES}/${confirmDeleteSpecies.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -594,7 +667,7 @@ const FotodeBrowser = () => {
                 onClick={() => handlePhotoClick(photo.id)}
               >
                 <img 
-                  src={`http://localhost:8001/static/${getRelativeFilePath(photo.file_path)}`} 
+                  src={`${STATIC_FILE_URL}/${getRelativeFilePath(photo.file_path)}`} 
                   alt="Looduspilt" 
                   className="photo-thumbnail"
                   onError={(e) => {e.target.src = '/placeholder.jpg'}}
@@ -632,7 +705,7 @@ const FotodeBrowser = () => {
             <div className="detail-content">
               <div className="detail-image">
                 <img 
-                  src={`http://localhost:8001/static/${getRelativeFilePath(selectedPhoto.photo.file_path)}`} 
+                  src={`${STATIC_FILE_URL}/${getRelativeFilePath(selectedPhoto.photo.file_path)}`} 
                   alt="Looduspilt"
                   onError={(e) => {e.target.src = '/placeholder.jpg'}} 
                 />

@@ -8,6 +8,7 @@ import random
 from typing import List, Dict, Any, Optional
 import base64
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +22,20 @@ class PlantIdClient:
         Args:
             api_key: API key for the plant identification service. 
                     If None, will try to get from environment variable PLANT_ID_API_KEY
-                    or use the default API key.
             use_simulation: Whether to use simulated data instead of making real API calls.
                           Defaults to False to use real API.
         """
-        # Set default API key if none provided
-        default_api_key = "gkUrPir7M5moavv0Hp4PFGl68BC6uYlRmPi35aU3YZhC2GPclZ"
-        
-        # Kasuta päris API-t simulatsiooni asemel
-        self.use_simulation = False
-        
-        self.api_key = api_key or os.environ.get("PLANT_ID_API_KEY") or default_api_key
-            
+        # Remove hardcoded API key for security reasons
+        self.api_key = api_key or os.environ.get("PLANT_ID_API_KEY") or ""
+        self.use_simulation = use_simulation
         self.api_url = "https://api.plant.id/v2/identify"
+
+        logger.info(f"PlantIdClient initialized, simulation mode: {self.use_simulation}")
         
+        # Check if API key is missing and warn
+        if not self.api_key and not self.use_simulation:
+            logger.warning("Plant.id API key is missing. Please set the PLANT_ID_API_KEY environment variable or in database settings.")
+
     def identify_plant(self, image_path: str) -> Dict[str, Any]:
         """
         Identify plant species in an image.
@@ -44,72 +45,173 @@ class PlantIdClient:
             
         Returns:
             Dictionary containing identification results
+            
+        Raises:
+            Exception: If API key is missing and simulation mode is disabled
         """
+        # Kui API võti on puudu ja simulatsioonirežiim pole lubatud, tõsta viga
+        if not self.api_key or self.api_key.strip() == "":
+            if not self.use_simulation:
+                error_msg = "API võti puudub. Taimetuvastuse jaoks on vaja seadistada Plant.ID API võti administreerimislehel."
+                logger.error(error_msg)
+                raise Exception(error_msg)
+            else:
+                logger.info("API võti puudub, kasutan simulatsioonirežiimi")
+                return self._get_simulated_response()
+            
         if self.use_simulation:
-            return self._get_simulated_response(image_path)
-        else:
-            return self._call_plant_id_api(image_path)
-    
-    def _call_plant_id_api(self, image_path: str) -> Dict[str, Any]:
-        """
-        Call the Plant.id API to identify plants in the image.
+            logger.info("Using simulated plant identification")
+            return self._get_simulated_response()
         
-        Args:
-            image_path: Path to the image file
-            
-        Returns:
-            Dictionary containing API response
-        """
         try:
-            # Read the image file and encode it as base64
-            with open(image_path, "rb") as file:
-                image_data = file.read()
+            logger.info(f"Sending request to Plant.id API: {image_path}")
+            # Read image binary data
+            with open(image_path, "rb") as img_file:
+                img_data = img_file.read()
             
-            base64_image = base64.b64encode(image_data).decode("utf-8")
+            # Encode image to base64
+            encoded_img = base64.b64encode(img_data).decode("utf-8")
             
-            # Prepare the data for the API request
-            data = {
+            # Prepare API request
+            payload = {
                 "api_key": self.api_key,
-                "images": [base64_image],
-                "modifiers": ["crops_fast", "similar_images"],
-                "plant_language": "et",  # Estonian language for plant names
-                "plant_details": ["common_names", "url", "wiki_description", "taxonomy", "synonyms"]
+                "images": [encoded_img],
+                "modifiers": ["similar_images"],
+                "plant_details": ["common_names", "url", "wiki_description", "taxonomy"]
             }
             
-            # Make the request to the API
-            logger.info(f"Making request to Plant.id API for image: {os.path.basename(image_path)}")
-            response = requests.post(self.api_url, json=data)
+            # Send request
+            response = requests.post(self.api_url, json=payload)
+            logger.info(f"Request sent, response status: {response.status_code}")
             
-            # Check if the request was successful
+            # Check response
             if response.status_code != 200:
-                logger.error(f"Plant.id API returned error: {response.status_code}, {response.text}")
-                return {"error": f"API request failed with status code {response.status_code}"}
+                logger.error(f"API error: {response.status_code}, {response.text}")
+                if self.use_simulation:
+                    # Kui simulatsioon on lubatud, kasuta seda tagavaraplaanina
+                    logger.info("API viga, kasutan simulatsiooni tagavaraplaanina")
+                    return self._get_simulated_response()
+                else:
+                    # Muidu tõsta viga
+                    error_msg = f"Viga Plant.id API-s: {response.status_code}, {response.text}"
+                    raise Exception(error_msg)
             
-            # Parse the response
-            result = response.json()
-            logger.info(f"Received response from Plant.id API with {len(result.get('suggestions', []))} suggestions")
+            # Log partial response for debugging
+            response_json = response.json()
+            logger.info(f"Received API response with keys: {list(response_json.keys())}")
             
-            return result
+            if "suggestions" not in response_json or not response_json["suggestions"]:
+                logger.warning("Response does not contain 'suggestions' key or it's empty!")
+                if self.use_simulation:
+                    logger.info("Vastuses pole soovitusi, kasutan simulatsiooni tagavaraplaanina")
+                    return self._get_simulated_response()
+                else:
+                    # Muidu tagasta tühi massiiv kui pole simulatsioonirežiim
+                    return {"suggestions": []}
+            
+            # Return response
+            return response_json
             
         except Exception as e:
-            logger.error(f"Error calling Plant.id API: {str(e)}")
-            # Kui päris API-ga on probleem, tagasta lihtsustatud andmed
-            return {"error": str(e), "suggestions": []}
-    
-    def _get_simulated_response(self, image_path: str) -> Dict[str, Any]:
+            logger.error(f"Error with Plant.id API: {str(e)}")
+            if self.use_simulation:
+                # Kui simulatsioon on lubatud, kasuta seda tagavaraplaanina
+                logger.info("API viga, kasutan simulatsiooni tagavaraplaanina")
+                return self._get_simulated_response()
+            else:
+                # Muidu tõsta viga edasi
+                raise
+
+    def extract_species_data(self, api_response: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Return simulated plant identification response for development purposes.
+        Extract structured species data from the API response.
         
         Args:
-            image_path: Path to the image file
+            api_response: API response
             
+        Returns:
+            List of identified species with structured data
+        """
+        try:
+            # Log the input for debugging
+            logger.info(f"Extracting species data from response with keys: {list(api_response.keys())}")
+            
+            results = []
+            suggestions = api_response.get("suggestions", [])
+            
+            if not suggestions:
+                logger.warning("No suggestions found in API response!")
+                logger.debug(f"Raw API response snippet: {str(api_response)[:300]}...")
+                # Kui vastuses pole soovitusi ja simulatsioonirežiim pole lubatud, tagasta tühi massiiv
+                if not self.use_simulation:
+                    logger.info("Vastuses pole soovitusi, tagastan tühja massiivi")
+                    return []
+                else:
+                    # Simulatsioonirežiimis kasuta simuleeritud andmeid
+                    logger.info("Vastuses pole soovitusi, kasutan simuleeritud andmeid")
+                    sim_response = self._get_simulated_response()
+                    return self.extract_species_data(sim_response)
+                
+            logger.info(f"Processing {len(suggestions)} suggestions")
+            
+            for i, suggestion in enumerate(suggestions):
+                logger.debug(f"Processing suggestion {i+1}/{len(suggestions)}")
+                
+                # Check if suggestion has all required fields
+                if "plant_name" not in suggestion:
+                    logger.warning(f"Suggestion {i+1} missing 'plant_name' field!")
+                    continue
+                    
+                plant_details = suggestion.get("plant_details", {})
+                common_names = plant_details.get("common_names", [])
+                
+                # Get wiki description safely
+                wiki_desc = ""
+                wiki_description = plant_details.get("wiki_description", {})
+                if isinstance(wiki_description, dict):
+                    wiki_desc = wiki_description.get("value", "")
+                
+                # Get taxonomy data safely
+                taxonomy = plant_details.get("taxonomy", {})
+                family = taxonomy.get("family", "") if isinstance(taxonomy, dict) else ""
+                
+                species_data = {
+                    "scientific_name": suggestion.get("plant_name", ""),
+                    "common_names": common_names,
+                    "probability": suggestion.get("probability", 0),
+                    "family": family,
+                    "description": wiki_desc
+                }
+                results.append(species_data)
+                
+            logger.info(f"Successfully extracted data for {len(results)} species")
+            return results
+        except Exception as e:
+            logger.error(f"Error extracting data: {str(e)}")
+            # Log the input structure that caused the error
+            try:
+                logger.error(f"API response structure that caused error: {json.dumps(api_response)[:500]}...")
+            except:
+                logger.error("Could not serialize API response for logging")
+                
+            # Vea korral tagasta tühi massiiv kui simulatsioonirežiim pole lubatud
+            if not self.use_simulation:
+                logger.info("Viga andmete töötlemisel, tagastan tühja massiivi")
+                return []
+            else:
+                # Simulatsioonirežiimis kasuta simuleeritud andmeid
+                logger.info("Viga andmete töötlemisel, kasutan simuleeritud andmeid")
+                sim_response = self._get_simulated_response()
+                return self.extract_species_data(sim_response)
+
+    def _get_simulated_response(self) -> Dict[str, Any]:
+        """
+        Return simulated Plant.id API response.
+        Used for testing or when API is unavailable.
+        
         Returns:
             Dictionary containing simulated identification results
         """
-        # Get the filename to determine which simulation to use
-        filename = os.path.basename(image_path).lower()
-        file_id = hash(image_path) % 100  # Kasuta faili tee räsi väärtust juhuslikkuse lisamiseks
-        
         # Common plants database for simulation
         common_plants = [
             {
@@ -121,7 +223,10 @@ class PlantIdClient:
                         "family": "Asteraceae",
                         "genus": "Taraxacum"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Taraxacum_officinale"
+                    "url": "https://en.wikipedia.org/wiki/Taraxacum_officinale",
+                    "wiki_description": {
+                        "value": "Võilill on laialt levinud taim..."
+                    }
                 }
             },
             {
@@ -133,7 +238,10 @@ class PlantIdClient:
                         "family": "Asteraceae",
                         "genus": "Bellis"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Bellis_perennis"
+                    "url": "https://en.wikipedia.org/wiki/Bellis_perennis",
+                    "wiki_description": {
+                        "value": "Kirikakar on mitmeaastane rohttaim..."
+                    }
                 }
             },
             {
@@ -145,7 +253,10 @@ class PlantIdClient:
                         "family": "Liliaceae",
                         "genus": "Tulipa"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Tulipa_gesneriana"
+                    "url": "https://en.wikipedia.org/wiki/Tulipa_gesneriana",
+                    "wiki_description": {
+                        "value": "Tulp on kevadel õitsev sibullill..."
+                    }
                 }
             },
             {
@@ -157,7 +268,10 @@ class PlantIdClient:
                         "family": "Primulaceae",
                         "genus": "Primula"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Primula_veris"
+                    "url": "https://en.wikipedia.org/wiki/Primula_veris",
+                    "wiki_description": {
+                        "value": "Nurmenukk on mitmeaastane kevadel õitsev taim..."
+                    }
                 }
             },
             {
@@ -169,7 +283,10 @@ class PlantIdClient:
                         "family": "Asparagaceae",
                         "genus": "Convallaria"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Lily_of_the_valley"
+                    "url": "https://en.wikipedia.org/wiki/Lily_of_the_valley",
+                    "wiki_description": {
+                        "value": "Maikelluke on mürgine, kuid dekoratiivne kevadine metsataim..."
+                    }
                 }
             }
         ]
@@ -185,7 +302,10 @@ class PlantIdClient:
                         "family": "Asteraceae",
                         "genus": "Leucanthemum"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Leucanthemum_vulgare"
+                    "url": "https://en.wikipedia.org/wiki/Leucanthemum_vulgare",
+                    "wiki_description": {
+                        "value": "Härjasilm on mitmeaastane taim..."
+                    }
                 }
             },
             {
@@ -197,7 +317,10 @@ class PlantIdClient:
                         "family": "Fabaceae",
                         "genus": "Trifolium"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Trifolium_repens"
+                    "url": "https://en.wikipedia.org/wiki/Trifolium_repens",
+                    "wiki_description": {
+                        "value": "Valge ristik on mitmeaastane rohttaim..."
+                    }
                 }
             },
             {
@@ -209,46 +332,19 @@ class PlantIdClient:
                         "family": "Campanulaceae",
                         "genus": "Campanula"
                     },
-                    "url": "https://en.wikipedia.org/wiki/Campanula_patula"
+                    "url": "https://en.wikipedia.org/wiki/Campanula_patula",
+                    "wiki_description": {
+                        "value": "Harilik kellukas on ühe- või kaheaastane taim..."
+                    }
                 }
             }
         ]
         
-        # Choose primary suggestion using more varied logic
-        primary_suggestion = None
+        # Vali juhuslikult 3-5 taime simulatsiooni jaoks
+        main_suggestions = random.sample(common_plants, min(3, len(common_plants)))
+        secondary_suggestions = random.sample(secondary_plants, min(2, len(secondary_plants)))
         
-        # Kasuta kombinatsiooni failinimest ja räsist, et määrata taimede valik
+        logger.info("Generated simulated response with plant suggestions")
         return {
-            "suggestions": common_plants + secondary_plants
+            "suggestions": main_suggestions + secondary_suggestions
         }
-    
-    def extract_species_data(self, identification_result: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Extract structured species data from the identification result.
-        
-        Args:
-            identification_result: Raw result from the identify_plant method
-            
-        Returns:
-            List of identified species with structured data
-        """
-        species_list = []
-        
-        if "error" in identification_result:
-            logger.error(f"Error in identification result: {identification_result['error']}")
-            return species_list
-            
-        if "suggestions" not in identification_result:
-            return species_list
-        
-        for suggestion in identification_result["suggestions"]:
-            species_data = {
-                "scientific_name": suggestion.get("plant_name", ""),
-                "probability": suggestion.get("probability", 0),
-                "common_names": suggestion.get("plant_details", {}).get("common_names", []),
-                "family": suggestion.get("plant_details", {}).get("taxonomy", {}).get("family", ""),
-                "genus": suggestion.get("plant_details", {}).get("taxonomy", {}).get("genus", "")
-            }
-            species_list.append(species_data)
-        
-        return species_list
