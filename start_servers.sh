@@ -67,18 +67,82 @@ fi
 echo -e "${BLUE}Aktiveerin virtuaalkeskkonna...${NC}"
 source "$VENV_DIR/bin/activate"
 
-# Kontrolli, kas vajalikud paketid on installitud
-echo -e "${BLUE}Kontrollin vajalikke pakette...${NC}"
-python3 -c "import fastapi" 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}Installin vajalikud Python paketid...${NC}"
-    pip install fastapi uvicorn sqlalchemy psutil
+echo -e "${BLUE}Kontrollin ja installin backend Python sõltuvused...${NC}"
+if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+        pip install -r "$BACKEND_DIR/requirements.txt"
+else
+        echo -e "${YELLOW}Hoiatus: requirements.txt puudub. Jätkan olemasolevate pakettidega.${NC}"
 fi
 
-# Uuenda andmebaasi skeemi
+# Abifunktsioon: oota kuni port on kuulatavas olekus
+wait_for_port() {
+    local host=$1
+    local port=$2
+    local retries=${3:-60}
+    local delay=${4:-1}
+    echo -e "${YELLOW}Ootan, kuni ${host}:${port} on saadaval (max ${retries}s)...${NC}"
+    for i in $(seq 1 $retries); do
+        if (echo >/dev/tcp/${host}/${port}) &>/dev/null; then
+            echo -e "${GREEN}${host}:${port} on saadaval.${NC}"
+            return 0
+        fi
+        sleep "$delay"
+    done
+    return 1
+}
+
+# Käivita Postgres konteiner docker-compose abil (database/docker-compose.yml)
+echo -e "${BLUE}Käivitan PostgreSQL andmebaasi (docker-compose)...${NC}"
+DOCKER_COMPOSE_CMD=""
+if command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+elif command -v docker >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+fi
+
+if [ -n "$DOCKER_COMPOSE_CMD" ] && [ -f "$PROJECT_DIR/database/docker-compose.yml" ]; then
+    pushd "$PROJECT_DIR/database" >/dev/null
+    $DOCKER_COMPOSE_CMD up -d
+    compose_status=$?
+    popd >/dev/null
+    if [ $compose_status -ne 0 ]; then
+        echo -e "${RED}PostgreSQL konteineri käivitamine ebaõnnestus. Jätkan, kuid skeemi uuendus võib feilib.${NC}"
+    fi
+else
+    echo -e "${YELLOW}Docker Compose ei ole saadaval või docker-compose.yml puudub. Eeldan, et Postgres töötab lokaalselt pordil 5433.${NC}"
+fi
+
+# Oota kuni andmebaasi port 5433 on saadaval
+if ! wait_for_port localhost 5433 60 1; then
+    echo -e "${RED}Andmebaasi port 5433 ei avanenud ooteaja jooksul. Kontrolli, et Postgres töötab.${NC}"
+    exit 1
+fi
+
+# Kui docker compose on kasutusel, kasuta pg_isready valmisoleku kontrolliks
+if [ -n "$DOCKER_COMPOSE_CMD" ]; then
+    echo -e "${YELLOW}Kontrollin konteineris pg_isready abil valmisolekut...${NC}"
+    for i in {1..30}; do
+        $DOCKER_COMPOSE_CMD -f "$PROJECT_DIR/database/docker-compose.yml" exec -T postgres pg_isready -h 127.0.0.1 -p 5432 -U nature_user >/dev/null 2>&1 && break
+        sleep 1
+        if [ $i -eq 30 ]; then
+            echo -e "${RED}pg_isready ei kinnitanud valmisolekut. Jätkan siiski skeemi uuendusega.${NC}"
+        fi
+    done
+fi
+
+# Uuenda andmebaasi skeemi (nüüd, kui DB on üleval)
 echo -e "${BLUE}Uuendan andmebaasi skeemi...${NC}"
 cd "$BACKEND_DIR"
-python3 update_schema.py
+# Proovi skeemi uuendust kuni 5 korda, vahedega
+tries=0
+until python3 update_schema.py; do
+    tries=$((tries+1))
+    if [ $tries -ge 5 ]; then
+        break
+    fi
+    echo -e "${YELLOW}Skeemi uuendus feilis, proovin uuesti (${tries}/5) 2s pärast...${NC}"
+    sleep 2
+done
 if [ $? -ne 0 ]; then
     echo -e "${RED}Andmebaasi skeemi uuendamine ebaõnnestus. Kontrolli logifaile.${NC}"
     exit 1

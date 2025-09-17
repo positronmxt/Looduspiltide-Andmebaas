@@ -36,6 +36,9 @@ package-lock.json
 *.log
 nohup.out
 
+# Uploaded files storage
+file_storage/
+
 # Database
 *.db-journal
 
