@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import './MassPhotoUploader.css';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/config';
 
 /**
  * Massilise piltide üleslaadimise komponent.
@@ -120,7 +121,7 @@ const MassPhotoUploader = () => {
     }
     
     try {
-      const response = await fetch('http://localhost:8000/photos/upload', {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.UPLOAD}`, {
         method: 'POST',
         body: formData,
       });

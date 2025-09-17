@@ -279,6 +279,7 @@ const FotodeBrowser = () => {
             id: `temp-${Date.now()}-${index}`, // Ajutine ID frontendis kuvamiseks
             scientific_name: species.scientific_name,
             common_name: species.common_names ? species.common_names[0] : null,
+            estonian_name: species.estonian_name || (species.common_names ? species.common_names.find(n => /[õäöüÕÄÖÜ]/.test(n)) : null),
             family: species.family,
             probability: species.probability
           };

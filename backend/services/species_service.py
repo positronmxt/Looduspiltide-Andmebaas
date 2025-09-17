@@ -50,7 +50,7 @@ def get_species(db: Session, skip: int = 0, limit: int = 100) -> List[Dict[str, 
     species_list = db.query(Species).offset(skip).limit(limit).all()
     return [model_to_dict(species) for species in species_list]
 
-def create_species(db: Session, scientific_name: str, common_name: str = None, family: str = None) -> Dict[str, Any]:
+def create_species(db: Session, scientific_name: str, common_name: str = None, family: str = None, estonian_name: str = None) -> Dict[str, Any]:
     """
     Create a new species record.
     
@@ -63,14 +63,14 @@ def create_species(db: Session, scientific_name: str, common_name: str = None, f
     Returns:
         Dictionary representation of the created Species object
     """
-    db_species = Species(scientific_name=scientific_name, common_name=common_name, family=family)
+    db_species = Species(scientific_name=scientific_name, common_name=common_name, family=family, estonian_name=estonian_name)
     db.add(db_species)
     db.commit()
     db.refresh(db_species)
     return model_to_dict(db_species)
 
 def update_species(db: Session, species_id: int, scientific_name: Optional[str] = None, 
-                  common_name: Optional[str] = None, family: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                  common_name: Optional[str] = None, family: Optional[str] = None, estonian_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
     Update an existing species record.
     
@@ -95,6 +95,8 @@ def update_species(db: Session, species_id: int, scientific_name: Optional[str] 
         db_species.common_name = common_name
     if family is not None:
         db_species.family = family
+    if estonian_name is not None:
+        db_species.estonian_name = estonian_name
     
     db.commit()
     db.refresh(db_species)

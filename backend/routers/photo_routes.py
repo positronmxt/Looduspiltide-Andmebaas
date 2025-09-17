@@ -72,6 +72,27 @@ def read_photos(
         ]
     return photos
 
+# Additional route without trailing slash to avoid automatic redirect (which can appear as a CORS/network error in browser)
+@router.get("")
+def read_photos_no_trailing_slash(
+    species_id: Optional[int] = None,
+    species_name: Optional[str] = None,
+    location: Optional[str] = None,
+    date: Optional[str] = None,
+    offset: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    return read_photos(
+        species_id=species_id,
+        species_name=species_name,
+        location=location,
+        date=date,
+        offset=offset,
+        limit=limit,
+        db=db
+    )
+
 @router.get("/{photo_id}")
 def read_photo(photo_id: int, db: Session = Depends(get_db)):
     """

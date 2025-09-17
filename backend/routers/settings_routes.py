@@ -5,6 +5,8 @@ See moodul sisaldab kõiki HTTP marsruute, mis on seotud rakenduse seadistuste h
 Võimaldab seadistuste loomist, lugemist, uuendamist ja kustutamist läbi REST API liidese.
 """
 from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi import Request
+import asyncio
 from typing import Dict, Any
 import logging
 from services.settings_service import SettingsService
@@ -19,6 +21,18 @@ router = APIRouter(
     tags=["settings"],
     responses={404: {"description": "Seadistus ei ole leitud"}},
 )
+
+@router.post("/shutdown")
+async def shutdown_server(request: Request):
+    """Sulgeb rakenduse serveri protsessi (graceful)."""
+    try:
+        loop = asyncio.get_event_loop()
+        loop.call_later(0.2, lambda: asyncio.create_task(request.app.shutdown()))
+        loop.call_later(0.4, lambda: asyncio.create_task(request.app.router.shutdown()))
+        loop.call_later(0.6, lambda: asyncio.create_task(request.app.state.router.shutdown()) if hasattr(request.app.state, 'router') else None)
+        return {"message": "Serveri sulgemine algatatud"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sulgemine ebaõnnestus: {e}")
 
 @router.get("/", response_model=Dict[str, Any])
 async def get_all_settings():

@@ -122,6 +122,9 @@ const SpeciesVerification = () => {
                     {result.common_names && result.common_names.length > 0 && (
                       <div className="common-names">
                         Tuntud kui: {result.common_names.join(', ')}
+                        {result.estonian_name && result.estonian_name !== result.common_names[0] && (
+                          <div className="estonian-name">Eesti keeles: {result.estonian_name}</div>
+                        )}
                       </div>
                     )}
                     <div className="taxonomy">

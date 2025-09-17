@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   PHOTOS: '/photos',
   SPECIES: '/species',
   SETTINGS: '/settings',
+  SETTINGS_SHUTDOWN: '/settings/shutdown',
   PLANT_ID: '/plant_id',
   RELATIONS: '/relations',
   BROWSE: '/browse',

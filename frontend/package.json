@@ -8,7 +8,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "assert": "^2.1.0",
-    "axios": "^1.9.0",
+    "axios": "^1.12.0",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
     "https-browserify": "^1.0.0",
@@ -23,7 +23,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "react-scripts --openssl-legacy-provider start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -45,5 +45,13 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "form-data": "^4.0.4",
+    "brace-expansion": "^2.0.2",
+    "nth-check": "^2.0.1",
+    "css-select": "^5.1.0",
+    "postcss": "^8.4.31",
+    "on-headers": "^1.0.2"
   }
 }

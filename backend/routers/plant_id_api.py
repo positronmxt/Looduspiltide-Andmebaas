@@ -8,7 +8,7 @@ import shutil
 import os
 import uuid
 from typing import List
-from tempfile import NamedTemporaryFile
+import tempfile
 from datetime import datetime
 import logging
 
@@ -19,6 +19,7 @@ from models.photo_models import Photo
 from models.relation_models import PhotoSpeciesRelation
 from models.settings_models import AppSettings
 from services import species_service, photo_service, relation_service, settings_service
+from utils.estonian_common_names import get_estonian_name
 
 # Seadista logi
 logging.basicConfig(level=logging.DEBUG)  # Muudetud INFO -> DEBUG
@@ -54,132 +55,81 @@ async def identify_plant(
     api_key: str = None,
     location: str = None
 ):
-    """
-    Tuvasta taimeliik üleslaetud pildil.
-    """
-    # Kui API võtit ei ole otseselt määratud, loe see seadistustest
+    """Tuvasta taimeliigid üles laaditud pildilt ja salvesta tulemused (best-effort)."""
     if not api_key:
         api_key = get_api_key_from_settings()
-        
-    # Salvesta üleslaetud fail ajutiselt
-    with NamedTemporaryFile(delete=False) as temp_file:
-        try:
-            shutil.copyfileobj(file.file, temp_file)
-            temp_path = temp_file.name
-            logger.info(f"Ajutine fail salvestatud: {temp_path}")
-        except Exception as e:
-            logger.error(f"Viga ajutise faili salvestamisel: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Faili üleslaadimise viga: {str(e)}")
-    
+
+    # Loo ajutine fail
+    suffix = os.path.splitext(file.filename or "")[1]
+    fd, temp_path = tempfile.mkstemp(suffix=suffix)
+    os.close(fd)
     try:
-        # Initsialiseeri taimetuvastuse klient päris API-ga (mitte simulatsiooniga)
-        plant_id_client = PlantIdClient(api_key=api_key, use_simulation=False)
-        logger.info("Plant ID Client initsialiseeritud")
-        
-        # Tuvasta taimed pildil
+        with open(temp_path, "wb") as out:
+            shutil.copyfileobj(file.file, out)
+
         try:
-            identification_result = plant_id_client.identify_plant(temp_path)
+            client = PlantIdClient(api_key=api_key, use_simulation=False)
         except Exception as e:
-            # Kui viga on seotud API võtmega, saada vastav teade
-            if "API võti puudub" in str(e):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Taimetuvastuse jaoks on vaja seadistada Plant.ID API võti administreerimislehel."
-                )
-            else:
-                raise  # Muu viga, edasta see
-                
-        logger.info("Tuvastamine õnnestus")
-        
-        # Ekstrakteeri struktureeritud liikide andmed
-        species_data = plant_id_client.extract_species_data(identification_result)
-        logger.info(f"Tuvastati {len(species_data)} liiki")
-        
+            raise HTTPException(status_code=500, detail=f"Klienti ei saanud initsialiseerida: {e}")
+
+        # Tuvastus
         try:
-            # Salvesta foto püsivalt file_storage kataloogi
-            file_storage_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "file_storage")
-            if not os.path.exists(file_storage_path):
-                os.makedirs(file_storage_path)
-                logger.info(f"Loodud kataloog: {file_storage_path}")
-            
-            permanent_filename = f"{uuid.uuid4()}-{file.filename}"
-            permanent_path = os.path.join(file_storage_path, permanent_filename)
-            
-            logger.info(f"Kopeerin faili asukohast {temp_path} asukohta {permanent_path}")
+            identification_result = client.identify_plant(temp_path)
+        except Exception as e:
+            if "API võti puudub" in str(e):
+                raise HTTPException(status_code=400, detail="Taimetuvastuse jaoks on vaja seadistada Plant.ID API võti administreerimislehel.")
+            raise HTTPException(status_code=500, detail=f"Tuvastamise viga: {e}")
+
+        species_data = client.extract_species_data(identification_result)
+
+        # Persistents (best-effort; vead logitakse, kuid ei katkesta vastust)
+        try:
+            storage_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "file_storage")
+            os.makedirs(storage_root, exist_ok=True)
+            permanent_name = f"{uuid.uuid4()}-{file.filename}"
+            permanent_path = os.path.join(storage_root, permanent_name)
             shutil.copy(temp_path, permanent_path)
-            logger.info(f"Fail kopeeritud püsivasse asukohta: {permanent_path}")
-            
-            # Salvesta foto info andmebaasi
-            current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            db_photo = photo_service.create_photo(
-                db, 
-                file_path=permanent_path, 
-                date=current_date,
+            photo_row = photo_service.create_photo(
+                db,
+                file_path=permanent_path,
+                date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 location=location
             )
-            logger.info(f"Foto info salvestatud andmebaasi ID-ga: {db_photo.id}")
-            
-            # Salvesta tuvastatud liigid ja seosed fotoga
-            if species_data:
-                for i, species_info in enumerate(species_data):
-                    if species_info["probability"] > 0.5:  # Salvesta kõik piisavalt suure tõenäosusega liigid
-                        # Kontrolli, kas liik on juba andmebaasis
-                        existing_species = db.query(Species).filter_by(
-                            scientific_name=species_info["scientific_name"]
-                        ).first()
-                        
-                        # Kui ei ole, loo uus liigi kirje
-                        if not existing_species:
-                            common_name = species_info["common_names"][0] if species_info["common_names"] else None
-                            db_species = species_service.create_species(
-                                db,
-                                scientific_name=species_info["scientific_name"],
-                                common_name=common_name,
-                                family=species_info["family"]
-                            )
-                            # Töötle nii sõnastikku kui objekti
-                            if isinstance(db_species, dict):
-                                species_id = db_species.get("id")
-                            else:
-                                species_id = db_species.id
-                            logger.info(f"Uus liik salvestatud ID-ga: {species_id}")
-                        else:
-                            species_id = existing_species.id
-                            logger.info(f"Olemasolev liik leitud ID-ga: {species_id}")
-                        
-                        # Loo seos foto ja liigi vahel
-                        category = "primary" if i == 0 else "secondary"
-                        relation = relation_service.create_relation(
+            for i, sp in enumerate(species_data):
+                if sp.get("probability", 0) > 0.5:
+                    existing = db.query(Species).filter_by(scientific_name=sp.get("scientific_name")).first()
+                    if not existing:
+                        common_name = sp.get("common_names", [None])[0]
+                        est_name = get_estonian_name(sp.get("scientific_name"), sp.get("common_names"))
+                        created = species_service.create_species(
                             db,
-                            photo_id=db_photo.id,
-                            species_id=species_id,
-                            category=category
+                            scientific_name=sp.get("scientific_name"),
+                            common_name=common_name,
+                            family=sp.get("family"),
+                            estonian_name=est_name
                         )
-                        logger.info(f"Loodud seos foto ID {db_photo.id} ja liigi ID {species_id} vahel, kategooria: {category}")
-            
+                        species_id = created.get("id") if isinstance(created, dict) else created.id
+                    else:
+                        species_id = existing.id
+                    relation_service.create_relation(
+                        db,
+                        photo_id=photo_row.id,
+                        species_id=species_id,
+                        category="primary" if i == 0 else "secondary"
+                    )
         except Exception as e:
-            logger.error(f"Viga failide või andmebaasi operatsioonidega: {str(e)}")
-            logger.exception(e)
-            # Jätkame, et vähemalt tuvastuse tulemused tagastada
-        
+            logger.error(f"Persistentsuse viga: {e}")
+
+        # Lisa estonian_name väljundisse
+        for sp in species_data:
+            if not sp.get("estonian_name"):
+                sp["estonian_name"] = get_estonian_name(sp.get("scientific_name"), sp.get("common_names"))
         return species_data
-    
-    except HTTPException:
-        # Edasta HTTP erandid muutmata kujul
-        raise
-    except Exception as e:
-        logger.error(f"Tuvastamise viga: {str(e)}")
-        logger.exception(e)
-        raise HTTPException(status_code=500, detail=str(e))
-    
     finally:
-        # Puhasta ajutine fail
         try:
             os.unlink(temp_path)
-            logger.info(f"Ajutine fail kustutatud: {temp_path}")
-        except Exception as e:
-            logger.error(f"Viga ajutise faili kustutamisel: {str(e)}")
-            # Jätkame, kuna see on ainult puhastamine
+        except Exception:
+            pass
 
 @router.post("/existing/{photo_id}", response_model=List[dict])
 async def identify_existing_photo(
@@ -261,11 +211,13 @@ async def identify_existing_photo(
                             # Kui ei ole, loo uus liigi kirje
                             if not existing_species:
                                 common_name = species_info["common_names"][0] if species_info["common_names"] else None
+                                est_name = get_estonian_name(species_info["scientific_name"], species_info.get("common_names"))
                                 db_species = species_service.create_species(
                                     db,
                                     scientific_name=species_info["scientific_name"],
                                     common_name=common_name,
-                                    family=species_info["family"]
+                                    family=species_info["family"],
+                                    estonian_name=est_name
                                 )
                                 # Töötle nii sõnastikku kui objekti
                                 if isinstance(db_species, dict):
@@ -279,7 +231,7 @@ async def identify_existing_photo(
                             
                             # Loo seos foto ja liigi vahel
                             category = "primary" if i == 0 else "secondary"
-                            relation = relation_service.create_relation(
+                            relation_service.create_relation(
                                 db,
                                 photo_id=photo_id,
                                 species_id=species_id,
@@ -295,6 +247,13 @@ async def identify_existing_photo(
         
         # Et näha, millised andmed tagastatakse
         logger.info(f"Tagastan {len(species_data)} liiki, esimene: {species_data[0] if species_data else 'tühi'}")
+        # Lisa eestikeelne nimi tagastatavasse andmestruktuuri
+        for item in species_data:
+            try:
+                if 'estonian_name' not in item or not item.get('estonian_name'):
+                    item['estonian_name'] = get_estonian_name(item.get('scientific_name'), item.get('common_names'))
+            except Exception:
+                pass
         return species_data
     
     except HTTPException:
@@ -338,9 +297,6 @@ async def identify_batch_photos(
             if not db_photo:
                 errors.append({"photo_id": photo_id, "error": "Fotot ei leitud"})
                 continue
-            
-            if isinstance(db_photo, dict):
-                file_path = db_photo["file_path"]
             else:
                 file_path = db_photo.file_path
             
@@ -370,6 +326,13 @@ async def identify_batch_photos(
             
             # Ekstrakteeri struktureeritud liikide andmed
             species_data = plant_id_client.extract_species_data(identification_result)
+            # Lisa eestikeelne nimi
+            for item in species_data:
+                try:
+                    if 'estonian_name' not in item or not item.get('estonian_name'):
+                        item['estonian_name'] = get_estonian_name(item.get('scientific_name'), item.get('common_names'))
+                except Exception:
+                    pass
             logger.info(f"Tuvastati {len(species_data)} liiki fotol ID: {photo_id}")
             
             # Eemalda vanad seosed, kui need eksisteerivad
@@ -392,11 +355,13 @@ async def identify_batch_photos(
                         # Kui ei ole, loo uus liigi kirje
                         if not existing_species:
                             common_name = species_info["common_names"][0] if species_info["common_names"] else None
+                            est_name = get_estonian_name(species_info["scientific_name"], species_info.get("common_names"))
                             db_species = species_service.create_species(
                                 db,
                                 scientific_name=species_info["scientific_name"],
                                 common_name=common_name,
-                                family=species_info["family"]
+                                family=species_info["family"],
+                                estonian_name=est_name
                             )
                             # Töötle nii sõnastikku kui objekti
                             if isinstance(db_species, dict):

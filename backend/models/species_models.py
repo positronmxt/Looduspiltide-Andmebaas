@@ -14,5 +14,7 @@ class Species(Base):
     scientific_name = Column(String, unique=True, index=True)
     common_name = Column(String)
     family = Column(String)
+    # Estonian localized common name
+    estonian_name = Column(String, nullable=True)
 
     photos = relationship("PhotoSpeciesRelation", back_populates="species")

@@ -23,6 +23,7 @@ function AdminPanel() {
   const [editMode, setEditMode] = useState({});
   const [editValues, setEditValues] = useState({});
   const [isUsingMockData, setIsUsingMockData] = useState(false);
+  const [shutdownMessage, setShutdownMessage] = useState(null);
 
   // Seadistuste laadimine
   useEffect(() => {
@@ -211,6 +212,17 @@ function AdminPanel() {
     }
   };
 
+  const handleShutdown = async () => {
+    if(!window.confirm('Kas kindlasti sulgeda server?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SETTINGS}/shutdown`, { method: 'POST' });
+      const data = await res.json().catch(()=>({}));
+      setShutdownMessage(data.message || 'Sulgemine algatatud');
+    } catch(e){
+      setShutdownMessage('Sulgemine ebaõnnestus: '+e.message);
+    }
+  };
+
   if (loading && settings.length === 0) {
     return <div className="admin-panel loading">Seadistuste laadimine...</div>;
   }
@@ -292,6 +304,8 @@ function AdminPanel() {
       </table>
       
       <div className="info-section">
+  <button onClick={handleShutdown} className="action-button delete-button" style={{marginBottom:'1rem'}}>Sulge serveri sessioon</button>
+  {shutdownMessage && <div className="warning-message">{shutdownMessage}</div>}
         <h3>Plant.id API kasutamine</h3>
         <p>
           Taimetuvastuseks on vajalik Plant.id API võti. Kui teil ei ole veel võtit, saate selle hankida 

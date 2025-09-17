@@ -35,6 +35,13 @@ def update_schema():
             ADD COLUMN IF NOT EXISTS camera_make VARCHAR,
             ADD COLUMN IF NOT EXISTS camera_model VARCHAR
         """))
+
+        # Add estonian_name column to species table
+        logger.info("Adding estonian_name column to species table if missing...")
+        connection.execute(text("""
+            ALTER TABLE species
+            ADD COLUMN IF NOT EXISTS estonian_name VARCHAR
+        """))
         
         # Check if app_settings table exists
         logger.info("Kontrollime app_settings tabeli olemasolu...")
